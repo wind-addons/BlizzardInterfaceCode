@@ -93,7 +93,6 @@ function LocalizeFrames()
 
 	-- Equipment Manager
 	GearManagerPopupFrame.BorderBox.EditBoxHeaderText:SetPoint("TOPLEFT", 24, -18);
-	GearManagerPopupFrame.BorderBox.IconSelectionText:SetPoint("TOPLEFT", 24, -66);
 
 	-- Combat log config
 	CombatConfigColorsExampleTitle:Hide();

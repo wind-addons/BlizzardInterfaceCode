@@ -16,7 +16,7 @@
 			</Layer>
 		</Layers>
 		<Frames>
-			<Cooldown name="$parentCooldown" parentKey="cooldown" hideCountdownNumbers="true" inherits="CooldownFrameTemplate" reverse="true" hidden="true">
+			<Cooldown name="$parentCooldown" parentKey="cooldown" hideCountdownNumbers="true" inherits="CooldownFrameTemplate" reverse="true" useParentLevel="true" hidden="true">
 				<Anchors>
 					<Anchor point="CENTER" x="0" y="-1"/>
 				</Anchors>
@@ -197,6 +197,8 @@
 			<OnLoad function="CompactUnitFrame_OnLoad"/>
 			<OnEnter function="UnitFrame_OnEnter"/>
 			<OnLeave function="UnitFrame_OnLeave"/>
+			<OnShow function="CompactUnitFrame_OnShow"/>
+			<OnHide function="CompactUnitFrame_OnHide"/>
 		</Scripts>
 	</Button>
 </Ui>

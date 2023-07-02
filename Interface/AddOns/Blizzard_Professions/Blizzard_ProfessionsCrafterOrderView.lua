@@ -1,5 +1,7 @@
 
 ProfessionsCrafterOrderViewMixin = {};
+local ownReagentsConfirmationReferenceKey = {};
+local ignoreConfirmationReferenceKey = {};
 
 function ProfessionsCrafterOrderViewMixin:InitButtons()
     self.OrderInfo.BackButton:SetScript("OnClick", function() self:CloseOrder(); end);
@@ -27,18 +29,20 @@ function ProfessionsCrafterOrderViewMixin:InitButtons()
 			end
 		end
 
-		local referenceKey = self;
-		if providedReagents and not StaticPopup_IsCustomGenericConfirmationShown(referenceKey) then
-			local customData = 
-			{
-				text = CRAFTING_ORDERS_OWN_REAGENTS_CONFIRMATION,
-				callback = StartCraft,
-				acceptText = YES,
-				cancelText = CANCEL,
-				referenceKey = referenceKey,
-			};
+		local referenceKey = ownReagentsConfirmationReferenceKey;
+		if providedReagents then
+			if not StaticPopup_IsCustomGenericConfirmationShown(referenceKey) then
+				local customData = 
+				{
+					text = CRAFTING_ORDERS_OWN_REAGENTS_CONFIRMATION,
+					callback = StartCraft,
+					acceptText = YES,
+					cancelText = CANCEL,
+					referenceKey = referenceKey,
+				};
 
-			StaticPopup_ShowCustomGenericConfirmation(customData);
+				StaticPopup_ShowCustomGenericConfirmation(customData);
+			end
 		else
 			StartCraft();
 		end
@@ -58,6 +62,7 @@ function ProfessionsCrafterOrderViewMixin:InitButtons()
     self.StopRecraftButton:SetScript("OnClick", function()
         self.recraftingOrderID = nil;
         self:SetOrder(self.order); -- Refresh all
+		self:CloseGenericConfirmation();
     end);
 
     self.CompleteOrderButton:SetScript("OnClick", function() 
@@ -80,6 +85,65 @@ function ProfessionsCrafterOrderViewMixin:InitButtons()
 			return;
 		end
 
+		-- Add whisper option
+		do
+			local info = UIDropDownMenu_CreateInfo();
+			info.text = WHISPER_MESSAGE;
+
+			local whisperStatus = self:GetWhisperCustomerStatus();
+
+			if whisperStatus == Enum.ChatWhisperTargetStatus.CanWhisper or whisperStatus == Enum.ChatWhisperTargetStatus.CanWhisperGuild then
+				info.func = function()
+					ChatFrame_SendTell(self.order.customerName);
+				end
+			else
+				info.disabled = true;
+				info.tooltipWhileDisabled = true;
+				info.tooltipOnButton = true;
+				info.tooltipTitle = "";
+				if whisperStatus == Enum.ChatWhisperTargetStatus.Offline then
+					info.tooltipText = PROF_ORDER_CANT_WHISPER_OFFLINE;
+				elseif whisperStatus == Enum.ChatWhisperTargetStatus.WrongFaction then
+					info.tooltipText = PROF_ORDER_CANT_WHISPER_WRONG_FACTION;
+				end
+			end
+			info.isNotRadio = true;
+			info.notCheckable = true;
+			UIDropDownMenu_AddButton(info, level);
+		end
+
+		-- Add "Add Friend" option
+		do
+			local info = UIDropDownMenu_CreateInfo();
+			info.text = ADD_CHARACTER_FRIEND;
+
+			-- Use the same status as whisper for now; if the player is offline, we can't easily check their faction
+			local whisperStatus = self:GetWhisperCustomerStatus();
+			local alreadyIsFriend = C_FriendList.IsFriend(self.order.customerGuid);
+
+			if whisperStatus == Enum.ChatWhisperTargetStatus.CanWhisper and not alreadyIsFriend then
+				info.func = function()
+					C_FriendList.AddFriend(self.order.customerName);
+				end
+			else
+				info.disabled = true;
+				info.tooltipWhileDisabled = true;
+				info.tooltipOnButton = true;
+				info.tooltipTitle = "";
+				if alreadyIsFriend then
+					info.tooltipText = ALREADY_FRIEND_FMT:format(self.order.customerName);
+				elseif whisperStatus == Enum.ChatWhisperTargetStatus.Offline then
+					info.tooltipText = PROF_ORDER_CANT_ADD_FRIEND_OFFLINE;
+				elseif whisperStatus == Enum.ChatWhisperTargetStatus.WrongFaction or whisperStatus == Enum.ChatWhisperTargetStatus.CanWhisperGuild then
+					-- CanWhisperGuild means we can whisper the player despite them being cross-faction because they are in our guild
+					info.tooltipText = PROF_ORDER_CANT_ADD_FRIEND_WRONG_FACTION;
+				end
+			end
+			info.isNotRadio = true;
+			info.notCheckable = true;
+			UIDropDownMenu_AddButton(info, level);
+		end
+
 		-- Add ignore option
 		do
 			local canIgnore = self.order.orderState == Enum.CraftingOrderState.Created and not C_FriendList.IsIgnoredByGuid(self.order.customerGuid);
@@ -87,7 +151,7 @@ function ProfessionsCrafterOrderViewMixin:InitButtons()
 			info.text = IGNORE;
 			if canIgnore then
 				info.func = function()
-					local referenceKey = self;
+					local referenceKey = ignoreConfirmationReferenceKey;
 					if not StaticPopup_IsCustomGenericConfirmationShown(referenceKey) then
 						local customData = 
 						{
@@ -115,28 +179,28 @@ function ProfessionsCrafterOrderViewMixin:InitButtons()
 			info.notCheckable = true;
 			UIDropDownMenu_AddButton(info, level);
 		end
-
-		-- Add whisper option
+		
+		-- Add report button
 		do
+			local canReport = self.order.orderState == Enum.CraftingOrderState.Created;
 			local info = UIDropDownMenu_CreateInfo();
-			info.text = WHISPER_MESSAGE;
-
-			local whisperStatus = self:GetWhisperCustomerStatus();
-
-			if whisperStatus == Enum.ChatWhisperTargetStatus.CanWhisper then
+			info.text = PROF_ORDER_REPORT;
+			if canReport then
 				info.func = function()
-					ChatFrame_SendTell(self.order.customerName);
+					if not ReportFrame:IsShown() then
+						local reportInfo = ReportInfo:CreateCraftingOrderReportInfo(Enum.ReportType.CraftingOrder, self.order.orderID);
+						if reportInfo then
+							local playerLocation = PlayerLocation:CreateFromGUID(self.order.customerGuid);
+							ReportFrame:InitiateReport(reportInfo, nil, playerLocation);
+						end
+					end
 				end
 			else
 				info.disabled = true;
 				info.tooltipWhileDisabled = true;
 				info.tooltipOnButton = true;
 				info.tooltipTitle = "";
-				if whisperStatus == Enum.ChatWhisperTargetStatus.Offline then
-					info.tooltipText = PROF_ORDER_CANT_WHISPER_OFFLINE;
-				elseif whisperStatus == Enum.ChatWhisperTargetStatus.WrongFaction then
-					info.tooltipText = PROF_ORDER_CANT_WHISPER_WRONG_FACTION;
-				end
+				info.tooltipText = PROF_ORDER_CANT_REPORT_IN_PROGRESS;
 			end
 			info.isNotRadio = true;
 			info.notCheckable = true;
@@ -225,6 +289,7 @@ local ProfessionsCrafterOrderViewEvents =
 	"BAG_UPDATE",
 	"BAG_UPDATE_DELAYED",
 	"CAN_LOCAL_WHISPER_TARGET_RESPONSE",
+	"PLAYER_REPORT_SUBMITTED",
 };
 function ProfessionsCrafterOrderViewMixin:OnEvent(event, ...)
     if event == "CRAFTINGORDERS_CLAIM_ORDER_RESPONSE" then
@@ -235,13 +300,17 @@ function ProfessionsCrafterOrderViewMixin:OnEvent(event, ...)
 
         local success = result == Enum.CraftingOrderResult.Ok;
         if not success then
-			if (result == Enum.CraftingOrderResult.CannotClaimOwnOrder) then
+			if result == Enum.CraftingOrderResult.CannotClaimOwnOrder then
 				UIErrorsFrame:AddExternalErrorMessage(PROFESSIONS_ORDER_CANNOT_CLAIM_OWN_ORDER);
+			elseif result == Enum.CraftingOrderResult.OutOfPublicOrderCapacity then
+				UIErrorsFrame:AddExternalErrorMessage(PROFESSIONS_ORDER_FAILED_NO_CLAIMS);
 			else
 				UIErrorsFrame:AddExternalErrorMessage(PROFESSIONS_ORDER_NOT_AVAILABLE);
 			end
             self:CloseOrder();
         end
+
+		self:CloseGenericConfirmation();
         -- View will update when the order added event comes in
     elseif event == "CRAFTINGORDERS_RELEASE_ORDER_RESPONSE" or event == "CRAFTINGORDERS_REJECT_ORDER_RESPONSE" then
         local result, orderID = ...;
@@ -323,6 +392,11 @@ function ProfessionsCrafterOrderViewMixin:OnEvent(event, ...)
 		if whisperTarget == self.order.customerGuid then
 			self:SetWhisperCustomerStatus(status);
 		end
+	elseif event == "PLAYER_REPORT_SUBMITTED" then
+		local reportedGuid = ...;
+		if reportedGuid == self.order.customerGuid then
+			self:CloseOrder();
+		end
     end
 end
 
@@ -336,13 +410,23 @@ function ProfessionsCrafterOrderViewMixin:OnShow()
     EventRegistry:RegisterCallback("Professions.AllocationUpdated", AllocationUpdatedUpdatedCallback, self);
 end
 
+function ProfessionsCrafterOrderViewMixin:ShowingGenericConfirmation()
+	return StaticPopup_IsCustomGenericConfirmationShown(ownReagentsConfirmationReferenceKey) or StaticPopup_IsCustomGenericConfirmationShown(ignoreConfirmationReferenceKey);
+end
+
+function ProfessionsCrafterOrderViewMixin:CloseGenericConfirmation()
+	if self:ShowingGenericConfirmation() then
+		StaticPopup_Hide("GENERIC_CONFIRMATION");
+	end
+end
+
 function ProfessionsCrafterOrderViewMixin:OnHide()
 	self.CraftingOutputLog:Close();
     FrameUtil.UnregisterFrameForEvents(self, ProfessionsCrafterOrderViewEvents);
     self:SetScript("OnUpdate", nil);
     EventRegistry:UnregisterCallback("Professions.AllocationUpdated", self);
     self:SetOverrideCastBarActive(false);
-    StaticPopup_Hide("GENERIC_CONFIRMATION");
+	self:CloseGenericConfirmation();
 end
 
 function ProfessionsCrafterOrderViewMixin:OnUpdate()
@@ -398,22 +482,25 @@ function ProfessionsCrafterOrderViewMixin:SchematicPostInit()
             end
         end
     end
-	
-    if not self.order.isFulfillable then -- Don't re-use reagents for subsequent recrafts
+
+	-- Don't re-use reagents for subsequent recrafts. When viewing the form after creating the item once,
+	-- the full reagent information will come from the modifications above, because we'll be looking at the
+	-- actual item.
+    if not self.order.isFulfillable then
         for _, reagentInfo in ipairs(self.order.reagents) do
-            local allocations = transaction:GetAllocations(reagentInfo.reagentSlot);
+            local allocations = transaction:GetAllocations(reagentInfo.slotIndex);
 
 			-- isBasicReagent check here to handle multiple allocations within the same slot (qualities)
-            if not self.reagentSlotProvidedByCustomer[reagentInfo.reagentSlot] or not reagentInfo.isBasicReagent then
+            if not self.reagentSlotProvidedByCustomer[reagentInfo.slotIndex] or not reagentInfo.isBasicReagent then
                 allocations:Clear();
-                self.reagentSlotProvidedByCustomer[reagentInfo.reagentSlot] = true;
+                self.reagentSlotProvidedByCustomer[reagentInfo.slotIndex] = true;
             end
             -- These allocations get cleared before sending the craft, but we allocate them for craft readiness validation
             allocations:Allocate(reagentInfo.reagent, reagentInfo.reagent.quantity);
-            reagentSlotToItemID[reagentInfo.reagentSlot] = reagentInfo.reagent.itemID;
+            reagentSlotToItemID[reagentInfo.slotIndex] = reagentInfo.reagent.itemID;
         end
     end
-	
+
 	if self:IsRecrafting() then
 		-- After the allocations above, strip any reagents that fail to meet prerequisites. This is a workaround for
 		-- incompatible reagents being part of the original order data because it is not removed until the item is
@@ -421,13 +508,18 @@ function ProfessionsCrafterOrderViewMixin:SchematicPostInit()
 		-- correct state.
 		for slotIndex, reagentSlotSchematic in ipairs(self.OrderDetails.SchematicForm.recipeSchematic.reagentSlotSchematics) do
             if reagentSlotSchematic.dataSlotType == Enum.TradeskillSlotDataType.ModifiedReagent then
-                local modification = transaction:GetModification(reagentSlotSchematic.dataSlotIndex);
-				local itemID = modification and modification.itemID;
-				if itemID and itemID > 0 and not transaction:AreAllRequirementsAllocatedByItemID(itemID) then
-					transaction:ClearAllocations(slotIndex);
-					transaction:ClearModification(reagentSlotSchematic.dataSlotIndex);
-					self.reagentSlotProvidedByCustomer[slotIndex] = nil;
-					reagentSlotToItemID[slotIndex] = nil;
+				-- Skip any slots where the existing modification was replaced by another customer provided slot.
+				local allocs = transaction:GetAllocations(slotIndex);
+				local alloc = allocs:SelectFirst();
+				if alloc then
+					local reagent = alloc:GetReagent();
+					local itemID = reagent.itemID;
+					if itemID and itemID > 0 and not transaction:AreAllRequirementsAllocatedByItemID(itemID) then
+						transaction:ClearAllocations(slotIndex);
+						transaction:ClearModification(reagentSlotSchematic.dataSlotIndex);
+						self.reagentSlotProvidedByCustomer[slotIndex] = nil;
+						reagentSlotToItemID[slotIndex] = nil;
+					end
 				end
             end
         end
@@ -554,7 +646,7 @@ function ProfessionsCrafterOrderViewMixin:UpdateStartOrderButton()
         errorReason = PROFESSIONS_CRAFTER_CANT_CLAIM_OWN;
     elseif claimInfo and self.order.orderType == Enum.CraftingOrderType.Public and claimInfo.claimsRemaining <= 0 and Professions.GetCraftingOrderRemainingTime(self.order.expirationTime) > Constants.ProfessionConsts.PUBLIC_CRAFTING_ORDER_STALE_THRESHOLD then
         enabled = false;
-        errorReason = PROFESSIONS_CRAFTER_OUT_OF_CLAIMS_FMT:format(claimInfo.hoursToRecharge);
+        errorReason = PROFESSIONS_CRAFTER_OUT_OF_CLAIMS_FMT:format(SecondsToTime(claimInfo.secondsToRecharge));
     elseif not recipeInfo or not recipeInfo.learned or (self.order.isRecraft and not C_CraftingOrders.OrderCanBeRecrafted(self.order.orderID)) then
 		enabled = false;
         errorReason = PROFESSIONS_CRAFTER_CANT_CLAIM_UNLEARNED;
