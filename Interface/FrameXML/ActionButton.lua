@@ -235,6 +235,7 @@ function ActionBarActionEventsFrameMixin:OnLoad()
 	self:RegisterEvent("UNIT_SPELLCAST_SENT");
 	self:RegisterUnitEvent("UNIT_SPELLCAST_INTERRUPTED", "player");
 	self:RegisterUnitEvent("UNIT_SPELLCAST_SUCCEEDED", "player");
+	self:RegisterUnitEvent("UNIT_SPELLCAST_FAILED", "player");
 	self:RegisterUnitEvent("UNIT_SPELLCAST_START", "player");
 	self:RegisterUnitEvent("UNIT_SPELLCAST_STOP", "player");
 	self:RegisterUnitEvent("UNIT_SPELLCAST_CHANNEL_START", "player");
@@ -267,7 +268,8 @@ function ActionBarActionEventsFrameMixin:IsSpellcastEvent(event)
 	event == "UNIT_SPELLCAST_RETICLE_CLEAR" or 
 	event == "UNIT_SPELLCAST_EMPOWER_START" or
 	event == "UNIT_SPELLCAST_EMPOWER_STOP" or
-	event == "UNIT_SPELLCAST_SENT") then 
+	event == "UNIT_SPELLCAST_SENT" or 
+	event == "UNIT_SPELLCAST_FAILED") then 
 		return true; 
 	else 
 		return false;
@@ -755,14 +757,6 @@ end
 
 function ActionButtonCooldown_OnCooldownDone(self, requireCooldownUpdate)
 	self:SetScript("OnCooldownDone", nil);
-	local cooldownFlash = self:GetParent().CooldownFlash;
-	local spellCastAnimFrame = self:GetParent().SpellCastAnimFrame;
-	if (cooldownFlash) then	
-		--If the spellcast anim is playing, don't allow the gcd anim to play. 
-		if (not spellCastAnimFrame or (spellCastAnimFrame and not spellCastAnimFrame:IsShown())) then
-			cooldownFlash:Setup();
-		end
-	end		
 	if (requireCooldownUpdate) then 
 		ActionButton_UpdateCooldown(self:GetParent());
 	end
@@ -776,9 +770,7 @@ local function CreateChargeCooldownFrame(parent)
 	local cooldown = CreateFrame("Cooldown", "ChargeCooldown"..numChargeCooldowns, parent, "CooldownFrameTemplate");
 	cooldown:SetHideCountdownNumbers(true);
 	cooldown:SetDrawSwipe(false);
-	cooldown:SetEdgeTexture("Interface\\HUD\\UI-HUD-ActionBar-StackCooldown");
 	cooldown:SetFrameStrata("TOOLTIP");
-
 	return cooldown;
 end
 
@@ -1036,7 +1028,7 @@ function ActionBarActionButtonMixin:OnEvent(event, ...)
 	elseif(event == "UNIT_SPELLCAST_SUCCEEDED") then 
 		self:StopSpellCastAnim(false, ActionButtonCastType.Cast); 
 		self:StopTargettingReticleAnim();
-	elseif(event == "UNIT_SPELLCAST_SENT") then 
+	elseif(event == "UNIT_SPELLCAST_SENT" or event == "UNIT_SPELLCAST_FAILED") then 
 		self:StopTargettingReticleAnim();
 	elseif (event == "UNIT_SPELLCAST_EMPOWER_START") then 
 		self:PlaySpellCastAnim(ActionButtonCastType.Empowered); 
