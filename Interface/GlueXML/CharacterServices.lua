@@ -77,6 +77,23 @@ local function CanBoostCharacter(class, level, boostInProgress, isTrialBoost, re
 	return IsBoostFlowValidForCharacter(CharacterUpgradeFlow.data, class, level, boostInProgress, isTrialBoost, revokedCharacterUpgrade, vasServiceInProgress, isExpansionTrialCharacter, raceFilename);
 end
 
+local function clearButtonScripts(button)
+	button:SetScript("OnClick", nil);
+	button:SetScript("OnDoubleClick", nil);
+	button:SetScript("OnDragStart", nil);
+	button:SetScript("OnDragStop", nil);
+	button:SetScript("OnMouseDown", nil);
+	button:SetScript("OnMouseUp", nil);
+	button:SetScript("OnEnter", nil);
+	button:SetScript("OnLeave", nil);
+
+	-- Are these necessary?
+	button.upButton:SetScript("OnClick", nil);
+	button.downButton:SetScript("OnClick", nil);
+	button.upButton:Hide();
+	button.downButton:Hide();
+end
+
 CharacterSelectBlockBase = {};
 
 function CharacterSelectBlockBase:SetCharacterSelectErrorFrameShown(showError)
@@ -332,7 +349,11 @@ end
 
 function CharacterSelectBlockBase:FormatResult()
 	local name, _, _, class, classFileName, _, level, _, _, _, _, _, _, _, _, prof1, prof2, _, _, _, _, isTrialBoost, _, revokedCharacterUpgrade = GetCharacterInfo(self.charid);
-	return SELECT_CHARACTER_RESULTS_FORMAT:format(RAID_CLASS_COLORS[classFileName].colorStr, name, level, class);
+	local classColor = NORMAL_FONT_COLOR;
+	if classFileName and RAID_CLASS_COLORS[classFileName] then
+		classColor = RAID_CLASS_COLORS[classFileName];
+	end
+	return SELECT_CHARACTER_RESULTS_FORMAT:format(classColor.colorStr, name, level, class);
 end
 
 function CharacterSelectBlockBase:OnHide()
@@ -812,23 +833,6 @@ function CharacterUpgradeFlow:GetFinishLabel()
 	return CharacterServicesFlowMixin.GetFinishLabel(self);
 end
 
-local function clearButtonScripts(button)
-	button:SetScript("OnClick", nil);
-	button:SetScript("OnDoubleClick", nil);
-	button:SetScript("OnDragStart", nil);
-	button:SetScript("OnDragStop", nil);
-	button:SetScript("OnMouseDown", nil);
-	button:SetScript("OnMouseUp", nil);
-	button:SetScript("OnEnter", nil);
-	button:SetScript("OnLeave", nil);
-
-	-- Are these necessary?
-	button.upButton:SetScript("OnClick", nil);
-	button.downButton:SetScript("OnClick", nil);
-	button.upButton:Hide();
-	button.downButton:Hide();
-end
-
 local function clearAllButtonScripts()
 	CharacterSelectCharacterFrame.ScrollBox:ForEachFrame(clearButtonScripts);
 end
@@ -1135,13 +1139,17 @@ function RPEUPgradeInfoBlock:Initialize(results)
 	
 	--dont clear results
 	--self:ClearResultInfo();
-	self.lastSelectedIndex = CharacterSelect.selectedIndex;
 
 	local button = CharacterSelectCharacterFrame.ScrollBox:FindFrameByPredicate(function(frame, elementData)
-		return frame.index == self.lastSelectedIndex;
+		return frame.index == CharacterSelect.selectedIndex;
 	end);
-	local serviceInfo = self:GetServiceInfoByCharacterID(button.characterID);
-	self:SaveResultInfo(button, serviceInfo.playerguid)
+
+	if button then
+		local serviceInfo = self:GetServiceInfoByCharacterID(button.characterID);
+		self:SaveResultInfo(button, serviceInfo.playerguid)
+	else
+		EndCharacterServicesFlow(); --if there's anything wrong with CharacterSelect.selectedIndex, abort.
+	end
 
 	local controlsFrame = self.frame.ControlsFrame
 	controlsFrame:Show();
