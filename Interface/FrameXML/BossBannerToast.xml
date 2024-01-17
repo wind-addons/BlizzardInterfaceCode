@@ -1,5 +1,5 @@
 <Ui xmlns="http://www.blizzard.com/wow/ui/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.blizzard.com/wow/ui/
-..\FrameXML\UI.xsd">
+UI_shared.xsd">
 	<Script file="BossBannerToast.lua"/>
 	<Script file="TopBannerManager.lua"/>
 	
@@ -351,6 +351,7 @@
 			<OnLoad function="BossBanner_OnLoad"/>
 			<OnEvent function="BossBanner_OnEvent"/>
 			<OnUpdate function="BossBanner_OnUpdate"/>
+			<OnMouseDown function="BossBanner_OnMouseDown"/>
 		</Scripts>
 	</Frame>
 </Ui>

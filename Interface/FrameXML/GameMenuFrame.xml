@@ -1,5 +1,5 @@
 <Ui xmlns="http://www.blizzard.com/wow/ui/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.blizzard.com/wow/ui/
-..\FrameXML\UI.xsd">
+UI.xsd">
 	<Script file="GameMenuFrame.lua"/>
 	<Frame name="GameMenuFrame" toplevel="true" frameStrata="DIALOG" enableMouse="true" hidden="true" parent="UIParent">
 		<Size x="195" y="280"/>
@@ -74,9 +74,6 @@
 					<Anchor point="TOP" relativeTo="GameMenuButtonWhatsNew" relativePoint="BOTTOM" x="0" y="-16"/>
 				</Anchors>
 				<Scripts>
-					<OnShow>
-						self:SetEnabled(not Kiosk.IsEnabled());
-					</OnShow>
 					<OnClick>
 						PlaySound(SOUNDKIT.IG_MAINMENU_OPTION);
 						SettingsPanel:Open();
@@ -115,7 +112,7 @@
 				</Anchors>
 				<Scripts>
 					<OnLoad>
-						if ( GetNumAddOns() == 0 ) then
+						if ( C_AddOns.GetNumAddOns() == 0 ) then
 							GameMenuButtonAddons:Hide();
 						else
 							GameMenuButtonAddons:Show();
@@ -137,7 +134,7 @@
 				</Anchors>
 				<Scripts>
 					<OnLoad>
-						if ( GetNumAddOns() == 0 ) then
+						if ( C_AddOns.GetNumAddOns() == 0 ) then
 							self:SetParent(GameMenuButtonMacros);
 							self:SetPoint("TOP", GameMenuButtonMacros, "BOTTOM", 0, -1);
 							GameMenuFrame:SetHeight(270);
@@ -156,7 +153,7 @@
 				</Anchors>
 				<Scripts>
 					<OnLoad>
-						if ( GetNumAddOns() == 0 ) then
+						if ( C_AddOns.GetNumAddOns() == 0 ) then
 							self:SetParent(GameMenuButtonMacros);
 							self:SetPoint("TOP", GameMenuButtonMacros, "BOTTOM", 0, -16);
 							GameMenuFrame:SetHeight(270);

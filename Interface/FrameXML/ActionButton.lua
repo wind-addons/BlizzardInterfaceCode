@@ -217,7 +217,7 @@ ActionBarActionEventsFrameMixin = {};
 function ActionBarActionEventsFrameMixin:OnLoad()
 	self.frames = {};
 	--self:RegisterEvent("ACTIONBAR_UPDATE_STATE");			not updating state from lua anymore, see SetActionUIButton
-	self:RegisterEvent("ACTIONBAR_UPDATE_USABLE");
+	--self:RegisterEvent("ACTIONBAR_UPDATE_USABLE");		replaced with ACTION_USABLE_CHANGED
 	--self:RegisterEvent("ACTIONBAR_UPDATE_COOLDOWN");		not updating cooldown from lua anymore, see SetActionUIButton
 	self:RegisterEvent("SPELL_UPDATE_CHARGES");
 	self:RegisterEvent("UPDATE_INVENTORY_ALERTS");
@@ -370,6 +370,44 @@ function ActionBarButtonRangeCheckFrameMixin:UnregisterFrame(action, frame)
 	C_ActionBar.EnableActionRangeCheck(action, false);
 end
 
+ActionBarButtonUsableWatcherFrameMixin = {};
+
+function ActionBarButtonUsableWatcherFrameMixin:OnLoad()
+	self.actions = {};
+	self:RegisterEvent("ACTION_USABLE_CHANGED");
+end
+
+function ActionBarButtonUsableWatcherFrameMixin:OnEvent(event, ...)
+	local changes = ...;
+
+	-- pass event down to the buttons
+	for _, change in ipairs(changes) do
+		local frames = self.actions[change.slot];
+		if frames then
+			for k, frame in pairs(frames) do
+				frame:UpdateUsable(change.slot, change.usable, change.noMana);
+			end
+		end
+	end
+end
+
+function ActionBarButtonUsableWatcherFrameMixin:RegisterFrame(action, frame)
+	if not self.actions[action] then
+		self.actions[action] = {};
+	end
+	if self.actions[action][frame] then
+		return;
+	end
+	self.actions[action][frame] = frame;
+end
+
+function ActionBarButtonUsableWatcherFrameMixin:UnregisterFrame(action, frame)
+	if not self.actions[action] or not self.actions[action][frame] then
+		return;
+	end
+	self.actions[action][frame] = nil;
+end
+
 ActionBarActionButtonMixin = {};
 
 function ActionBarActionButtonMixin:OnLoad()
@@ -455,11 +493,11 @@ function ActionBarActionButtonMixin:UpdateAction(force)
 	local action = self:CalculateAction();
 	if ( action ~= self.action or force ) then
 		if self.action then
-			ActionBarButtonRangeCheckFrame:UnregisterFrame(self.action, self);
+			self:UnregisterActionBarButtonCheckFrames(self.action);
 		end
 		self.action = action;
 		if self.action and self:IsVisible() then
-			ActionBarButtonRangeCheckFrame:RegisterFrame(self.action, self);
+			self:RegisterActionBarButtonCheckFrames(self.action);
 		end
 		SetActionUIButton(self, action, self.cooldown);
 		self:Update();
@@ -596,10 +634,13 @@ function ActionBarActionButtonMixin:UpdateState()
 	self:SetChecked(isChecked);
 end
 
-function ActionBarActionButtonMixin:UpdateUsable()
+function ActionBarActionButtonMixin:UpdateUsable(action, isUsable, notEnoughMana)
 	local icon = self.icon;
 
-	local isUsable, notEnoughMana = IsUsableAction(self.action);
+	assertsafe(action == nil or action == self.action);
+	if isUsable == nil or notEnoughMana == nil then
+		isUsable, notEnoughMana = IsUsableAction(self.action);
+	end
 	if ( isUsable ) then
 		icon:SetVertexColor(1.0, 1.0, 1.0);
 	elseif ( notEnoughMana ) then
@@ -725,7 +766,7 @@ function ActionButton_UpdateCooldown(self)
 
 	if ( (locStart + locDuration) > (start + duration) ) then
 		if ( self.cooldown.currentCooldownType ~= COOLDOWN_TYPE_LOSS_OF_CONTROL ) then
-			self.cooldown:SetEdgeTexture("Interface\\Cooldown\\edge-LoC");
+			self.cooldown:SetEdgeTexture("Interface\\Cooldown\\UI-HUD-ActionBar-LoC");
 			self.cooldown:SetSwipeColor(0.17, 0, 0);
 			self.cooldown:SetHideCountdownNumbers(true);
 			self.cooldown.currentCooldownType = COOLDOWN_TYPE_LOSS_OF_CONTROL;
@@ -736,7 +777,7 @@ function ActionButton_UpdateCooldown(self)
 		ClearChargeCooldown(self);
 	else
 		if ( self.cooldown.currentCooldownType ~= COOLDOWN_TYPE_NORMAL ) then
-			self.cooldown:SetEdgeTexture("Interface\\Cooldown\\edge");
+			self.cooldown:SetEdgeTexture("Interface\\Cooldown\\UI-HUD-ActionBar-SecondaryCooldown");
 			self.cooldown:SetSwipeColor(0, 0, 0);
 			self.cooldown:SetHideCountdownNumbers(false);
 			self.cooldown.currentCooldownType = COOLDOWN_TYPE_NORMAL;
@@ -770,7 +811,10 @@ local function CreateChargeCooldownFrame(parent)
 	local cooldown = CreateFrame("Cooldown", "ChargeCooldown"..numChargeCooldowns, parent, "CooldownFrameTemplate");
 	cooldown:SetHideCountdownNumbers(true);
 	cooldown:SetDrawSwipe(false);
-	cooldown:SetFrameStrata("TOOLTIP");
+	local icon = parent.Icon or parent.icon;
+	cooldown:SetPoint("TOPLEFT", icon, "TOPLEFT", 2, -2);
+	cooldown:SetPoint("BOTTOMRIGHT", icon, "BOTTOMRIGHT", -2, 2);
+	cooldown:SetFrameLevel(parent:GetFrameLevel());
 	return cooldown;
 end
 
@@ -813,8 +857,7 @@ function ActionBarActionButtonMixin:UpdateOverlayGlow()
 	if spellType == "spell" and IsSpellOverlayed(id) then
 		ActionButton_ShowOverlayGlow(self);
 	elseif spellType == "macro" then
-		local spellId = GetMacroSpell(id);
-		if spellId and IsSpellOverlayed(spellId) then
+		if id and IsSpellOverlayed(id) then
 			ActionButton_ShowOverlayGlow(self);
 		else
 			ActionButton_HideOverlayGlow(self);
@@ -916,6 +959,16 @@ function ActionBarActionButtonMixin:MatchesActiveButtonSpellID(spellID)
 	return id == spellID; 
 end	
 
+function ActionBarActionButtonMixin:RegisterActionBarButtonCheckFrames(action)
+	ActionBarButtonRangeCheckFrame:RegisterFrame(action, self);
+	ActionBarButtonUsableWatcherFrame:RegisterFrame(action, self);
+end
+
+function ActionBarActionButtonMixin:UnregisterActionBarButtonCheckFrames(action)
+	ActionBarButtonRangeCheckFrame:UnregisterFrame(action, self);
+	ActionBarButtonUsableWatcherFrame:UnregisterFrame(action, self);
+end
+
 function ActionBarActionButtonMixin:OnEvent(event, ...)
 	local arg1 = ...;
 	if ((event == "UNIT_INVENTORY_CHANGED" and arg1 == "player") or event == "LEARNED_SPELL_IN_TAB") then
@@ -948,7 +1001,7 @@ function ActionBarActionButtonMixin:OnEvent(event, ...)
 		((event == "UNIT_ENTERED_VEHICLE" or event == "UNIT_EXITED_VEHICLE") and (arg1 == "player")) or
 		((event == "COMPANION_UPDATE") and (arg1 == "MOUNT")) ) then
 		self:UpdateState();
-	elseif ( event == "ACTIONBAR_UPDATE_USABLE" or event == "PLAYER_MOUNT_DISPLAY_CHANGED" ) then
+	elseif ( event == "PLAYER_MOUNT_DISPLAY_CHANGED" ) then
 		self:UpdateUsable();
 	elseif ( event == "LOSS_OF_CONTROL_UPDATE" ) then
 		ActionButton_UpdateCooldown(self);
@@ -983,9 +1036,8 @@ function ActionBarActionButtonMixin:OnEvent(event, ...)
 		local actionType, id, subType = GetActionInfo(self.action);
 		if ( actionType == "spell" and id == arg1 ) then
 			ActionButton_ShowOverlayGlow(self);
-		elseif ( actionType == "macro" ) then
-			local spellId = GetMacroSpell(id);
-			if ( spellId and spellId == arg1 ) then
+		elseif ( actionType == "macro" and subType == "spell" ) then
+			if ( id == arg1 ) then
 				ActionButton_ShowOverlayGlow(self);
 			end
 		elseif (actionType == "flyout" and FlyoutHasSpell(id, arg1)) then
@@ -995,9 +1047,8 @@ function ActionBarActionButtonMixin:OnEvent(event, ...)
 		local actionType, id, subType = GetActionInfo(self.action);
 		if ( actionType == "spell" and id == arg1 ) then
 			ActionButton_HideOverlayGlow(self);
-		elseif ( actionType == "macro" ) then
-			local spellId = GetMacroSpell(id);
-			if (spellId and spellId == arg1 ) then
+		elseif ( actionType == "macro" and subType == "spell" ) then
+			if (id == arg1 ) then
 				ActionButton_HideOverlayGlow(self);
 			end
 		elseif (actionType == "flyout" and FlyoutHasSpell(id, arg1)) then
@@ -1120,14 +1171,15 @@ end
 function ActionBarActionButtonMixin:OnShow()
 	self:CheckNeedsUpdate();
 	if self.action then
-		ActionBarButtonRangeCheckFrame:RegisterFrame(self.action, self);
+		self:Update();
+		self:RegisterActionBarButtonCheckFrames(self.action);
 	end
 end
 
 function ActionBarActionButtonMixin:OnHide()
 	self:CheckNeedsUpdate();
 	if self.action then
-		ActionBarButtonRangeCheckFrame:UnregisterFrame(self.action, self);
+		self:UnregisterActionBarButtonCheckFrames(self.action);
 	end
 end
 
@@ -1432,7 +1484,7 @@ end
 BaseActionButtonMixin = {}
 
 function BaseActionButtonMixin:BaseActionButtonMixin_OnLoad()
-	self:UpdateButtonArt(self.isLastActionButton);
+	self:UpdateButtonArt();
 
 	self.NormalTexture:SetDrawLayer("OVERLAY");
 	self.PushedTexture:SetDrawLayer("OVERLAY");
@@ -1456,35 +1508,12 @@ function BaseActionButtonMixin:SetShowGrid(showGrid, reason)
 	end
 end
 
-function BaseActionButtonMixin:UpdateButtonArt(hideDivider)
+function BaseActionButtonMixin:UpdateButtonArt()
 	if (not self.SlotArt or not self.SlotBackground) then
 		return;
 	end
 
-	local function SetDividerShown(shown)
-		if (not self.RightDivider or not self.BottomDivider) then
-			return;
-		end
-
-		-- Don't show dividers if we have multiple rows or any extra padding
-		if (not self.bar or not shown or self.bar.numRows > 1 or self.bar.buttonPadding > self.bar.minButtonPadding) then
-			self.RightDivider:Hide();
-			self.BottomDivider:Hide();
-			return;
-		end
-
-		-- Right now buttons are only added to the right for horizontal and below for vertical
-		if (self.bar.isHorizontal) then
-			self.RightDivider:Show();
-			self.BottomDivider:Hide();
-		else
-			self.RightDivider:Hide();
-			self.BottomDivider:Show();
-		end
-	end
-
-	if (self.showButtonArt) then
-		SetDividerShown(not hideDivider);
+	if (self.bar and not self.bar.hideBarArt) then
 		self.SlotArt:Show();
 		self.SlotBackground:Hide();
 
@@ -1496,7 +1525,6 @@ function BaseActionButtonMixin:UpdateButtonArt(hideDivider)
 		self.PushedTexture:SetDrawLayer("OVERLAY");
 		self.PushedTexture:SetSize(46, 45);
 	else
-		SetDividerShown(false);
 		self.SlotArt:Hide();
 		self.SlotBackground:Show();
 
@@ -1550,8 +1578,8 @@ function SmallActionButtonMixin:SmallActionButtonMixin_OnLoad()
 	self.cooldown:SetPoint("BOTTOMRIGHT", self.icon, "BOTTOMRIGHT", -1, 1);
 end
 
-function SmallActionButtonMixin:UpdateButtonArt(hideDivider)
-	BaseActionButtonMixin.UpdateButtonArt(self, hideDivider);
+function SmallActionButtonMixin:UpdateButtonArt()
+	BaseActionButtonMixin.UpdateButtonArt(self);
 
 	-- Gotta set these texture sizes here since BaseActionButtonMixin.UpdateButtonArt changes their size
 	self.NormalTexture:SetSize(35, 35);

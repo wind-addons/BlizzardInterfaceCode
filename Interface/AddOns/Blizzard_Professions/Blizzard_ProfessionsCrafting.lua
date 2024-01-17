@@ -10,7 +10,7 @@ function CraftingSearchLGMixin:Init(recipeInfo)
 	self.Icon:SetTexture(recipeInfo.icon);
 end
 
-ProfessionsCraftingPageMixin = {};
+ProfessionsCraftingPageMixin = CreateFromMixins(ProfessionsRecipeListPanelMixin);
 
 local ProfessionsCraftingPageEvents =
 {
@@ -44,15 +44,20 @@ function ProfessionsCraftingPageMixin:OnLoad()
 	self.CreateButton:SetScript("OnClick", GenerateClosure(self.Create, self));
 	self.CreateAllButton:SetScript("OnClick", GenerateClosure(self.CreateAll, self));
 
-	local function SetSearchText(text)
-		self.RecipeList.SearchBox:SetText(text);
-		self.MinimizedSearchBox:SetText(text);
+	local function SyncSearchText(editBox)
+		local text = editBox:GetText();
+		if editBox ~= self.RecipeList.SearchBox then
+			self.RecipeList.SearchBox:SetText(text);
+		end
+		if editBox ~= self.MinimizedSearchBox then
+			self.MinimizedSearchBox:SetText(text);
+		end
 		Professions.OnRecipeListSearchTextChanged(text);
 	end
 
 	self.RecipeList.SearchBox:SetScript("OnTextChanged", function(editBox)
 		SearchBoxTemplate_OnTextChanged(editBox);
-		SetSearchText(editBox:GetText());
+		SyncSearchText(editBox);
 	end);
 
 	self.LinkButton:SetScript("OnClick", function()
@@ -170,7 +175,7 @@ function ProfessionsCraftingPageMixin:OnLoad()
 
 	self.MinimizedSearchBox:SetScript("OnTextChanged", function(editBox)
 		local valid, text = SearchBoxListMixin.OnTextChanged(editBox);
-		SetSearchText(editBox:GetText());
+		SyncSearchText(editBox);
 
 		self.MinimizedSearchResults:Hide();
 	end);
@@ -342,6 +347,9 @@ function ProfessionsCraftingPageMixin:OnHide()
 	HelpTip:HideAllSystem(helpTipSystem);
 
 	FrameUtil.UnregisterUpdateFunction(self);
+
+	self:StoreCollapses(self.RecipeList.ScrollBox);
+
 end
 
 function ProfessionsCraftingPageMixin:Update()
@@ -841,7 +849,7 @@ function ProfessionsCraftingPageMixin:Init(professionInfo)
 	Professions.UpdateRankBarVisibility(self.RankBar, self.professionInfo);
 
 	local searching = self.RecipeList.SearchBox:HasText();
-	local dataProvider = Professions.GenerateCraftingDataProvider(self.professionInfo.professionID, searching, noStripCategories);
+	local dataProvider = Professions.GenerateCraftingDataProvider(self.professionInfo.professionID, searching, noStripCategories, self:GetCollapses());
 	
 	if searching or changedProfessionID then
 		self.RecipeList.ScrollBox:SetDataProvider(dataProvider, ScrollBoxConstants.DiscardScrollPosition);
@@ -1015,8 +1023,6 @@ function ProfessionsCraftingPageMixin:CreateInternal(recipeID, count, recipeLeve
 			end
 		end
 	end
-
-	self.CraftingOutputLog:StartListening();
 
 	self.CreateMultipleInputBox:ClearFocus();
 	self:ValidateControls();

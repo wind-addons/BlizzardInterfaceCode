@@ -70,7 +70,7 @@ local PartyInfo =
 
 			Arguments =
 			{
-				{ Name = "category", Type = "number", Nilable = true },
+				{ Name = "category", Type = "luaIndex", Nilable = true },
 			},
 		},
 		{
@@ -146,12 +146,27 @@ local PartyInfo =
 			},
 		},
 		{
+			Name = "GetMinItemLevel",
+			Type = "Function",
+
+			Arguments =
+			{
+				{ Name = "avgItemLevelCategory", Type = "AvgItemLevelCategories", Nilable = false, Documentation = { "The active party is always used" } },
+			},
+
+			Returns =
+			{
+				{ Name = "minItemLevel", Type = "number", Nilable = false },
+				{ Name = "playerNameWithLowestItemLevel", Type = "cstring", Nilable = false },
+			},
+		},
+		{
 			Name = "GetMinLevel",
 			Type = "Function",
 
 			Arguments =
 			{
-				{ Name = "category", Type = "number", Nilable = true, Documentation = { "If not provided, the active party is used" } },
+				{ Name = "category", Type = "luaIndex", Nilable = true, Documentation = { "If not provided, the active party is used" } },
 			},
 
 			Returns =
@@ -184,7 +199,7 @@ local PartyInfo =
 
 			Arguments =
 			{
-				{ Name = "category", Type = "number", Nilable = true, Documentation = { "If not provided, the active party is used" } },
+				{ Name = "category", Type = "luaIndex", Nilable = true, Documentation = { "If not provided, the active party is used" } },
 			},
 
 			Returns =
@@ -198,7 +213,7 @@ local PartyInfo =
 
 			Arguments =
 			{
-				{ Name = "category", Type = "number", Nilable = true, Documentation = { "If not provided, the active party is used" } },
+				{ Name = "category", Type = "luaIndex", Nilable = true, Documentation = { "If not provided, the active party is used" } },
 			},
 
 			Returns =
@@ -222,7 +237,7 @@ local PartyInfo =
 
 			Arguments =
 			{
-				{ Name = "category", Type = "number", Nilable = true },
+				{ Name = "category", Type = "luaIndex", Nilable = true },
 			},
 		},
 		{

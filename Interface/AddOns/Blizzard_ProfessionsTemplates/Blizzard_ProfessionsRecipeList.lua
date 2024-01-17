@@ -149,9 +149,9 @@ end
 function ProfessionsRecipeListMixin:InitContextMenu(dropDown, level)
 	local recipeInfo = UIDROPDOWNMENU_MENU_VALUE;
 	local info = UIDropDownMenu_CreateInfo();
-	info.notCheckable = true;
-	
 	local currentlyFavorite = C_TradeSkillUI.IsRecipeFavorite(recipeInfo.recipeID);
+
+	info.notCheckable = true;
 	info.text = currentlyFavorite and BATTLE_PET_UNFAVORITE or BATTLE_PET_FAVORITE;
 	info.func = GenerateClosure(C_TradeSkillUI.SetRecipeFavorite, recipeInfo.recipeID, not currentlyFavorite);
 

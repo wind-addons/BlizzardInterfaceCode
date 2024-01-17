@@ -82,6 +82,7 @@ local ProfessionsRecipeFormEvents =
 	"TRACKED_RECIPE_UPDATE",
 	"TRADE_SKILL_ITEM_UPDATE",
 	"CRAFTING_DETAILS_UPDATE",
+	"TRADE_SKILL_FAVORITES_CHANGED"
 };
 
 function ProfessionsRecipeSchematicFormMixin:OnLoad()
@@ -227,6 +228,12 @@ function ProfessionsRecipeSchematicFormMixin:OnEvent(event, ...)
 		end
 	elseif event == "CRAFTING_DETAILS_UPDATE" then
 		self:UpdateDetailsStats();
+	elseif event == "TRADE_SKILL_FAVORITES_CHANGED" then
+		local isFavorite = ...;
+		if self.FavoriteButton:IsShown() then
+			self.FavoriteButton:SetChecked(isFavorite);
+			self.FavoriteButton:SetIsFavorite(isFavorite);
+		end
 	end
 end
 
@@ -416,7 +423,7 @@ function ProfessionsRecipeSchematicFormMixin:Init(recipeInfo, isRecraftOverride)
 		self.RecraftingOutputText:SetPoint("TOPLEFT", 28, -32);
 	end
 
-	local showFavoriteButton = not self.isInspection and self.canShowFavoriteButton and recipeInfo.learned and not isRecraft;
+	local showFavoriteButton = not self.isInspection and self.canShowFavoriteButton and recipeInfo.learned and not isRecraft and not C_TradeSkillUI.IsNPCCrafting();
 	self.FavoriteButton:SetShown(showFavoriteButton);
 	if showFavoriteButton then
 		local isFavorite = C_TradeSkillUI.IsRecipeFavorite(recipeID);

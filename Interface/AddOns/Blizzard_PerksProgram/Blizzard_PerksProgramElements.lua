@@ -11,13 +11,11 @@ StaticPopupDialogs["PERKS_PROGRAM_CONFIRM_PURCHASE"] = {
 	text = PERKS_PROGRAM_CONFIRM_PURCHASE,
 	button1 = PERKS_PROGRAM_PURCHASE,
 	button2 = CANCEL,
-	OnAccept = GenerateClosure(StaticPopup_OnAcceptWithSpinner, PerksProgramPurchaseOnAccept, PerksProgramPurchaseOnEvent, {"PERKS_PROGRAM_PURCHASE_SUCCESS"}),
+	OnAccept = GenerateClosure(StaticPopup_OnAcceptWithSpinner, PerksProgramPurchaseOnAccept, PerksProgramPurchaseOnEvent, {"PERKS_PROGRAM_PURCHASE_SUCCESS"}, 0),
 	timeout = 0,
 	exclusive = 1,
 	hasItemFrame = 1,
 	fullScreenCover = true,
-	enterClicksFirstButton = true,
-	hideOnEscape = true,
 };
 
 local function PerksProgramRefundOnAccept(popup)
@@ -32,12 +30,19 @@ StaticPopupDialogs["PERKS_PROGRAM_CONFIRM_REFUND"] = {
 	text = PERKS_PROGRAM_CONFIRM_REFUND,
 	button1 = PERKS_PROGRAM_REFUND,
 	button2 = CANCEL,
-	OnAccept = GenerateClosure(StaticPopup_OnAcceptWithSpinner, PerksProgramRefundOnAccept, PerksProgramRefundOnEvent, {"PERKS_PROGRAM_REFUND_SUCCESS"}),
+	OnAccept = GenerateClosure(StaticPopup_OnAcceptWithSpinner, PerksProgramRefundOnAccept, PerksProgramRefundOnEvent, {"PERKS_PROGRAM_REFUND_SUCCESS"}, 0),
 	timeout = 0,
 	exclusive = 1,
 	hasItemFrame = 1,
 	fullScreenCover = true,
-	enterClicksFirstButton = true,
+};
+
+StaticPopupDialogs["PERKS_PROGRAM_SLOW_PURCHASE"] = {
+	text = PERKS_PROGRAM_SLOW_PURCHASE,
+	button1 = PERKS_PROGRAM_RETURN_TO_TRADING_POST,
+	timeout = 0,
+	exclusive = 1,
+	fullScreenCover = true,
 	hideOnEscape = true,
 };
 
@@ -47,7 +52,15 @@ StaticPopupDialogs["PERKS_PROGRAM_SERVER_ERROR"] = {
 	timeout = 0,
 	exclusive = 1,
 	fullScreenCover = true,
-	enterClicksFirstButton = true,
+	hideOnEscape = true,
+};
+
+StaticPopupDialogs["PERKS_PROGRAM_ITEM_PROCESSING_ERROR"] = {
+	text = PERKS_PROGRAM_ITEM_PROCESSING_ERROR,
+	button1 = OKAY,
+	timeout = 0,
+	exclusive = 1,
+	fullScreenCover = true,
 	hideOnEscape = true,
 };
 
@@ -55,16 +68,26 @@ StaticPopupDialogs["PERKS_PROGRAM_CONFIRM_OVERRIDE_FROZEN_ITEM"] = {
 	text = PERKS_PROGRAM_CONFIRM_OVERRIDE_FROZEN_ITEM,
 	button1 = PERKS_PROGRAM_CONFIRM,
 	button2 = CANCEL,
-	OnAccept = function(self) PerksProgramFrame:OverrideFrozenItem(); end,
-	OnCancel = function(self) PerksProgramFrame:ResetDragAndDrop(); end,
+	OnShow = function(self) EventRegistry:TriggerEvent("PerksProgram.OnFrozenItemConfirmationShown"); end,
+	OnAccept = function(self) EventRegistry:TriggerEvent("PerksProgram.OnFrozenItemConfirmationAccepted"); end,
+	OnCancel = function(self) EventRegistry:TriggerEvent("PerksProgram.OnFrozenItemConfirmationCanceled"); end,
+	OnHide = function(self) EventRegistry:TriggerEvent("PerksProgram.OnFrozenItemConfirmationHidden"); end,
 	timeout = 0,
 	exclusive = 1,
 	hasItemFrame = 1,
 	fullScreenCover = true,
 	acceptDelay = 5,
-	enterClicksFirstButton = true,
-	hideOnEscape = true,
 };
+
+
+local function AddPurchasePendingTooltipLines(tooltip)
+	GameTooltip_AddHighlightLine(tooltip, PERKS_PROGRAM_PURCHASE_PENDING, wrap);
+	GameTooltip_AddNormalLine(tooltip, PERKS_PROGRAM_PURCHASE_IN_PROGRESS, wrap);
+end
+
+local function IsPerksVendorCategoryTransmog(perksVendorCategoryID)
+	return perksVendorCategoryID == Enum.PerksVendorCategoryType.Transmog or perksVendorCategoryID == Enum.PerksVendorCategoryType.Transmogset;
+end
 
 ----------------------------------------------------------------------------------
 -- PerksProgramProductButtonMixin
@@ -72,47 +95,69 @@ StaticPopupDialogs["PERKS_PROGRAM_CONFIRM_OVERRIDE_FROZEN_ITEM"] = {
 PerksProgramProductButtonMixin = {};
 function PerksProgramProductButtonMixin:OnLoad()
 	self:RegisterForDrag("LeftButton");
+	EventRegistry:RegisterCallback("PerksProgram.CelebratePurchase", self.CelebratePurchase, self);
+	EventRegistry:RegisterCallback("PerksProgram.OnProductInfoChanged", self.OnProductInfoChanged, self);
+
+	self:RegisterEvent("PERKS_PROGRAM_CURRENCY_REFRESH");
+
 	self.tooltip = PerksProgramFrame.PerksProgramTooltip;
 	local newFont = PerksProgramFrame:GetLabelFont();
 	self.ContentsContainer.Label:SetFontObject(newFont);
+
+	self.ContentsContainer.PurchasePendingSpinner:Init(
+		function() self:OnEnter(); end,
+		function() self:OnLeave(); end
+		);
 end
 
-function PerksProgramProductButtonMixin:Init(elementData, currencyIconMarkup, isSelected, playerCurrencyAmount)
-	local container = self.ContentsContainer;
+function PerksProgramProductButtonMixin:Init(onDragStartCallback)
+	self.onDragStartCallback = onDragStartCallback;
+end
+
+function PerksProgramProductButtonMixin:SetItemInfo(itemInfo)
+	self.itemInfo = itemInfo;
 
 	self.CelebrateAnimation:Hide();
 	self.CelebrateAnimation.AlphaInAnimation:Stop();
 
-	self.perksVendorItemID = elementData.perksVendorItemID;
-	container.Label:SetText(elementData.name);
+	local container = self.ContentsContainer;
 
-	local price = elementData.price;
-	if playerCurrencyAmount then
-		if elementData.price > playerCurrencyAmount then
-			price = GRAY_FONT_COLOR:WrapTextInColorCode(price);
-		else
-			price = WHITE_FONT_COLOR:WrapTextInColorCode(price);
-		end
-	end
-	container.Price:SetText(format(PERKS_PROGRAM_PRICE_FORMAT, price, currencyIconMarkup));
+	container.Label:SetText(self.itemInfo.name);
 
-	self.purchased = elementData.purchased;
-	container.Price:SetShown(not self.purchased);
-	container.Purchased:SetShown(self.purchased);
+	self:UpdateItemPriceElement();
+	self:UpdateTimeRemainingText();
 
-	elementData.timeRemaining = C_PerksProgram.GetTimeRemaining(elementData.perksVendorItemID);
-	local endTime = elementData.isFrozen and "" or PerksProgramFrame:FormatTimeLeft(elementData.timeRemaining, PerksProgramFrame.TimeLeftListFormatter);
-	container.TimeRemaining:SetText(endTime);
-	container.FrozenIcon:SetShown(elementData.isFrozen);
-
-	self.itemID = elementData.itemID;
-	local iconTexture = C_Item.GetItemIconByID(self.itemID);
+	local iconTexture = C_Item.GetItemIconByID(self.itemInfo.itemID);
 	container.Icon:SetTexture(iconTexture);
-	self.isSelected = isSelected;
-	self:SetSelection(isSelected);
+end
+
+function PerksProgramProductButtonMixin:UpdateItemPriceElement()
+	if self.itemInfo then
+		local price = self.itemInfo.price;
+		local playerCurrencyAmount = C_PerksProgram.GetCurrencyAmount();
+		if playerCurrencyAmount then
+			if self.itemInfo.price > playerCurrencyAmount then
+				price = GRAY_FONT_COLOR:WrapTextInColorCode(price);
+			else
+				price = WHITE_FONT_COLOR:WrapTextInColorCode(price);
+			end
+		end
+
+		local container = self.ContentsContainer;
+
+		container.Price:SetText(format(PERKS_PROGRAM_PRICE_FORMAT, price, PerksProgramFrame:GetCurrencyIconMarkup()));
+
+		container.Price:SetShown(not self.itemInfo.purchased and not self.itemInfo.refundable and not self.itemInfo.isPurchasePending);
+		container.PurchasePendingSpinner:SetShown(self.itemInfo.isPurchasePending);
+		container.RefundIcon:SetShown(self.itemInfo.refundable);
+		container.PurchasedIcon:SetShown(self.itemInfo.purchased and not self.itemInfo.refundable);
+	end
 end
 
 function PerksProgramProductButtonMixin:OnEvent(event, ...)
+	if event == "PERKS_PROGRAM_CURRENCY_REFRESH" then
+		self:UpdateItemPriceElement();
+	end
 end
 
 function PerksProgramProductButtonMixin:OnMouseDown()
@@ -128,9 +173,11 @@ function PerksProgramProductButtonMixin:OnMouseUp()
 end
 
 function PerksProgramProductButtonMixin:OnEnter()
-	self.tooltip:SetOwner(self, "ANCHOR_RIGHT", -16, 0);
-	self.tooltip:SetItemByID(self.itemID);
-	self.tooltip:Show();
+	if self.itemInfo then
+		self.tooltip:SetOwner(self, "ANCHOR_RIGHT", -16, 0);
+		self.tooltip:SetItemByID(self.itemInfo.itemID);
+		self.tooltip:Show();
+	end
 
 	self.ContentsContainer.Label:SetTextColor(HIGHLIGHT_FONT_COLOR:GetRGB());
 	self.ArtContainer.HighlightTexture:Show();
@@ -142,22 +189,285 @@ function PerksProgramProductButtonMixin:OnLeave()
 	if not self.isSelected then
 		self.ContentsContainer.Label:SetTextColor(NORMAL_FONT_COLOR:GetRGB());
 	end
+
 	self.ArtContainer.HighlightTexture:Hide();
 	self.tooltip:Hide();
 end
 
 function PerksProgramProductButtonMixin:OnDragStart()
-	if not self.purchased then
-		C_PerksProgram.PickupPerksVendorItem(self.perksVendorItemID);
-	end
+	self.onDragStartCallback();
 end
 
-function PerksProgramProductButtonMixin:SetSelection(selected)
+function PerksProgramProductButtonMixin:SetSelected(selected)
 	local color = selected and WHITE_FONT_COLOR or NORMAL_FONT_COLOR;
 	self.ContentsContainer.Label:SetTextColor(color:GetRGB());
 	self.ArtContainer.SelectedTexture:SetShown(selected);
 	self.isSelected = selected;
 end
+
+function PerksProgramProductButtonMixin:IsSelected()
+	return self.isSelected;
+end
+
+function PerksProgramProductButtonMixin:GetItemInfo()
+	return self.itemInfo;
+end
+
+function PerksProgramProductButtonMixin:IsSameItem(itemInfo)
+	return self.itemInfo and self.itemInfo.perksVendorItemID == itemInfo.perksVendorItemID;
+end
+
+function PerksProgramProductButtonMixin:UpdateTimeRemainingText()
+	self.itemInfo.timeRemaining = C_PerksProgram.GetTimeRemaining(self.itemInfo.perksVendorItemID);
+
+	local text;
+	if self.itemInfo.purchased or self.itemInfo.isPurchasePending then
+		text = PERKS_PROGRAM_PURCHASED_TIME_REMAINING;
+	else
+		text = PerksProgramFrame:FormatTimeLeft(self.itemInfo.timeRemaining, PerksProgramFrame.TimeLeftListFormatter);
+	end
+	self.ContentsContainer.TimeRemaining:SetText(text);
+end
+
+function PerksProgramProductButtonMixin:CelebratePurchase(itemInfo)
+	if not self:IsSameItem(itemInfo) then
+		return;
+	end
+
+	self.CelebrateAnimation:Show();
+	self.CelebrateAnimation.AlphaInAnimation:Play();
+end
+
+function PerksProgramProductButtonMixin:OnProductInfoChanged(itemInfo)
+	if not self:IsSameItem(itemInfo) then
+		return;
+	end
+
+	self:SetItemInfo(itemInfo);
+end
+
+----------------------------------------------------------------------------------
+-- PerksProgramFrozenProductButtonMixin
+----------------------------------------------------------------------------------
+PerksProgramFrozenProductButtonMixin = {};
+
+function PerksProgramFrozenProductButtonMixin:FrozenProductButton_OnLoad()
+	-- Frozen products can't be dragged
+	self:SetScript("OnDragStart", nil);
+
+	-- Hide TimeRemainingText since we don't show it for frozen items
+	self.ContentsContainer.TimeRemaining:Hide();
+end
+
+function PerksProgramFrozenProductButtonMixin:Init(onSelectedCallback)
+	local onDragStartCallback = nil; -- Frozen products can't be dragged so don't give a OnDragStartCallback
+	PerksProgramProductButtonMixin.Init(self, onDragStartCallback);
+
+	self.onSelectedCallback = onSelectedCallback;
+end
+
+function PerksProgramFrozenProductButtonMixin:OnClick()
+	if self:HasDraggedItemToFreeze() then
+		self:SetupFreezeDraggedItem();
+		return;
+	end
+
+	self:SetSelected(true);
+end
+
+function PerksProgramFrozenProductButtonMixin:OnReceiveDrag()
+	self:SetupFreezeDraggedItem();
+end
+
+function PerksProgramFrozenProductButtonMixin:SetSelected(selected)
+	if selected then
+		if not self.itemInfo or self.isSelected then
+			return;
+		end
+
+		self.onSelectedCallback(self.itemInfo);
+	end
+
+	PerksProgramProductButtonMixin.SetSelected(self, selected);
+end
+
+function PerksProgramFrozenProductButtonMixin:SetItemInfo(itemInfo)
+	local currentFrozenVendorItemInfo = PerksProgramFrame:GetFrozenPerksVendorItemInfo();
+	local currentPerksVendorItemID = nil;
+	if currentFrozenVendorItemInfo then
+		currentPerksVendorItemID = currentFrozenVendorItemInfo.perksVendorItemID;
+	end
+
+	self.isPendingFreezeItem = itemInfo.perksVendorItemID ~= currentPerksVendorItemID;
+
+	PerksProgramProductButtonMixin.SetItemInfo(self, itemInfo);
+	self.ContentsContainer.Icon:Show();
+	self.ContentsContainer.Label:Show();
+
+	self:ShowItemFrozen(not self.isPendingFreezeItem);
+	self:ShowItemGlow(self.isPendingFreezeItem);
+
+	-- The frozen item UI could be showing an item that is pending to be frozen, but is not yet frozen (needing user confirmation).
+	-- In that case, we do not want the text to say that it is currently frozen.
+	if not self.isPendingFreezeItem then
+		self.ContentsContainer.Label:SetText(format(PERKS_PROGRAM_FROZEN_ITEM_SET, self.itemInfo.name));
+	end
+
+	self.FrozenContentContainer.InstructionsText:Hide();
+end
+
+function PerksProgramFrozenProductButtonMixin:ClearItemInfo()
+	self.itemInfo = nil;
+	self.isPendingFreezeItem = false;
+
+	self.CelebrateAnimation:Hide();
+	self.CelebrateAnimation.AlphaInAnimation:Stop();
+
+	local container = self.ContentsContainer;
+	container.Label:Hide();
+	container.Price:Hide();
+	container.RefundIcon:Hide();
+	container.PurchasedIcon:Hide();
+	container.Icon:Hide();
+
+	self.FrozenContentContainer.InstructionsText:Show();
+end
+
+function PerksProgramFrozenProductButtonMixin:HasDraggedItemToFreeze()
+	local draggedVendorItemID = C_PerksProgram.GetDraggedPerksVendorItem();
+	local frozenVendorItem = PerksProgramFrame:GetFrozenPerksVendorItemInfo();
+	return draggedVendorItemID ~= 0 and (not frozenVendorItem or frozenVendorItem.perksVendorItemID ~= draggedVendorItemID);
+end
+
+function PerksProgramFrozenProductButtonMixin:SetupFreezeDraggedItem()
+	if not self:HasDraggedItemToFreeze() then
+		return;
+	end
+
+	if PerksProgramFrame:GetServerErrorState() then
+		C_PerksProgram.ResetHeldItemDragAndDrop();
+		PerksProgramFrame:ShowServerErrorDialog();
+		return;
+	end
+
+	local draggedVendorItemID = C_PerksProgram.GetDraggedPerksVendorItem();
+	local draggedVendorItemInfo = PerksProgramFrame:GetVendorItemInfo(draggedVendorItemID);
+	local frozenVendorItem = PerksProgramFrame:GetFrozenPerksVendorItemInfo();
+
+	if draggedVendorItemInfo.isPurchasePending or (frozenVendorItem and frozenVendorItem.isPurchasePending) then
+		C_PerksProgram.ResetHeldItemDragAndDrop();
+		StaticPopup_Show("PERKS_PROGRAM_ITEM_PROCESSING_ERROR");
+		return;
+	end
+
+	-- User could trigger an override while the freeze anims are still playing out
+	self.FrozenArtContainer.ConfirmedFreezeAnim:Stop();
+
+	-- Update frozen slot to show icon/text of pending new frozen item
+	-- Then show a popup asking if we want to override our existing frozen item
+	self:SetItemInfo(draggedVendorItemInfo);
+
+	-- If we don't have a frozen vendor item already then just instantly freeze the dragged item
+	local frozenVendorItem = PerksProgramFrame:GetFrozenPerksVendorItemInfo();
+	if not frozenVendorItem then
+		self:FreezeDraggedItem();
+		return;
+	end
+
+	local itemData = {};
+	local _, itemLink, itemRarity, _, _, _, _, _, _, itemTexture = GetItemInfo(frozenVendorItem.itemID);
+	itemData.product = frozenVendorItem;
+	itemData.link = itemLink;
+	itemData.name = frozenVendorItem.name;
+	itemData.color = {ITEM_QUALITY_COLORS[itemRarity].color:GetRGBA()};
+	itemData.tooltip = PerksProgramTooltip;
+	itemData.texture = itemTexture;
+
+	EventRegistry:RegisterCallback("PerksProgram.OnFrozenItemConfirmationHidden", self.OnFrozenItemConfirmationHidden, self);
+	EventRegistry:RegisterCallback("PerksProgram.OnFrozenItemConfirmationAccepted", self.FreezeDraggedItem, self);
+	EventRegistry:RegisterCallback("PerksProgram.OnFrozenItemConfirmationCanceled", self.CancelPendingFreeze, self);
+	EventRegistry:RegisterCallback("PerksProgram.CancelFrozenItemConfirmation", self.CancelPendingFreeze, self);
+
+	StaticPopup_Show("PERKS_PROGRAM_CONFIRM_OVERRIDE_FROZEN_ITEM", nil, nil, itemData);
+end
+
+function PerksProgramFrozenProductButtonMixin:CancelPendingFreeze()
+	if not self.isPendingFreezeItem then
+		return;
+	end
+
+	StaticPopup_Hide("PERKS_PROGRAM_CONFIRM_OVERRIDE_FROZEN_ITEM");
+
+	C_PerksProgram.ResetHeldItemDragAndDrop();
+
+	-- Assign old item's icon to OverlayFrozenSlot so it can animate going away
+	self.FrozenArtContainer.OverlayFrozenSlot:SetTexture(self.ContentsContainer.Icon:GetTexture());
+
+	local frozenVendorItemInfo = PerksProgramFrame:GetFrozenPerksVendorItemInfo();
+	self:SetItemInfo(frozenVendorItemInfo);
+
+	self.FrozenArtContainer.CancelledFreezeAnim:Restart();
+end
+
+function PerksProgramFrozenProductButtonMixin:FreezeDraggedItem()
+	if not self:HasDraggedItemToFreeze() then
+		return;
+	end
+
+	self:SetSelected(true);
+	self.FrozenArtContainer.ConfirmedFreezeAnim:Restart();
+	PlaySound(SOUNDKIT.TRADING_POST_UI_ITEM_LOCKING);
+
+	C_PerksProgram.SetFrozenPerksVendorItem();
+end
+
+-- Only pieces that stay visible once the related animation would be complete.
+function PerksProgramFrozenProductButtonMixin:ShowItemGlow(show)
+	self.FrozenArtContainer.ItemGlow:SetAlpha(show and 1 or 0);
+end
+
+-- Only pieces that stay visible once the related animation would be complete.
+function PerksProgramFrozenProductButtonMixin:ShowItemFrozen(show)
+	local alpha = show and 1 or 0;
+	self.FrozenArtContainer.FrostFrame:SetAlpha(alpha);
+	self.FrozenArtContainer.Frost1:SetAlpha(alpha);
+	self.FrozenArtContainer.Frost2:SetAlpha(alpha);
+	self.FrozenArtContainer.Frost3:SetAlpha(alpha);
+end
+
+function PerksProgramFrozenProductButtonMixin:OnFrozenItemConfirmationHidden()
+	EventRegistry:UnregisterCallback("PerksProgram.OnFrozenItemConfirmationHidden", self);
+	EventRegistry:UnregisterCallback("PerksProgram.CancelFrozenItemConfirmation", self);
+	EventRegistry:UnregisterCallback("PerksProgram.OnFrozenItemConfirmationAccepted", self);
+	EventRegistry:UnregisterCallback("PerksProgram.OnFrozenItemConfirmationCanceled", self);
+end
+
+----------------------------------------------------------------------------------
+-- PerksProgramPurchasePendingSpinnerMixin
+----------------------------------------------------------------------------------
+PerksProgramPurchasePendingSpinnerMixin = {};
+
+function PerksProgramPurchasePendingSpinnerMixin:Init(onEnterCallback, onLeaveCallback)
+	self.onEnterCallback = onEnterCallback;
+	self.onLeaveCallback = onLeaveCallback;
+end
+
+function PerksProgramPurchasePendingSpinnerMixin:OnEnter()
+	self.onEnterCallback();
+
+	PerksProgramTooltip:SetOwner(self, "ANCHOR_RIGHT", 0, 0);
+	AddPurchasePendingTooltipLines(PerksProgramTooltip);
+	PerksProgramTooltip:Show();
+end
+
+function PerksProgramPurchasePendingSpinnerMixin:OnLeave()
+	self.onLeaveCallback();
+
+	if PerksProgramTooltip:GetOwner() == self then
+		PerksProgramTooltip:Hide();
+	end
+end
+
 
 ----------------------------------------------------------------------------------
 -- FilterDropDownContainerMixin
@@ -233,6 +543,9 @@ function FilterDropDownContainerMixin:SetFilterData(options)
 	self.options = options;
 end
 
+----------------------------------------------------------------------------------
+-- FilterDropDownButtonMixin
+----------------------------------------------------------------------------------
 FilterDropDownButtonMixin = {};
 function FilterDropDownButtonMixin:OnMouseDown(button)
 	if self:IsEnabled() then
@@ -252,21 +565,103 @@ function PerksProgramButtonMixin:OnClick()
 	end
 end
 
-PerksProgramPurchaseButtonMixin = CreateFromMixins(PerksProgramButtonMixin);
-function PerksProgramPurchaseButtonMixin:OnLoad()
-	self.tooltip = PerksProgramFrame.PerksProgramTooltip;
-end
-
-function PerksProgramPurchaseButtonMixin:OnEnter()
-	if not self:IsEnabled() then
-		self.tooltip:SetOwner(self, "ANCHOR_LEFT", 0, 0);
-		GameTooltip_AddNormalLine(self.tooltip, PERKS_PROGRAM_NOT_ENOUGH_CURRENCY, wrap);
-		self.tooltip:Show();
+function PerksProgramButtonMixin:OnEnter()
+	-- Inheriting mixins should add a ShowTooltip method for showing their appropriate tooltip
+	if self.ShowTooltip then
+		self:ShowTooltip(PerksProgramTooltip);
 	end
 end
 
-function PerksProgramPurchaseButtonMixin:OnLeave()
-	self.tooltip:Hide();
+function PerksProgramButtonMixin:OnLeave()
+	if PerksProgramTooltip:GetOwner() == self then
+		PerksProgramTooltip:Hide();
+	end
+end
+
+----------------------------------------------------------------------------------
+-- PerksProgramPurchaseButtonMixin
+----------------------------------------------------------------------------------
+PerksProgramPurchaseButtonMixin = {};
+function PerksProgramPurchaseButtonMixin:OnLoad()
+	EventRegistry:RegisterCallback("PerksProgramModel.OnProductSelectedAfterModel", self.UpdateState, self);
+	EventRegistry:RegisterCallback("PerksProgram.OnProductPurchasedStateChange", self.UpdateState, self);
+	EventRegistry:RegisterCallback("PerksProgram.OnServerErrorStateChanged", self.UpdateState, self);
+
+	self:RegisterEvent("PERKS_PROGRAM_CURRENCY_REFRESH");
+
+	self.spinnerOffset = -3;
+	self.spinnerWidth = self.Spinner:GetWidth();
+
+	self.Spinner:SetPoint("RIGHT", self:GetFontString(), "LEFT", self.spinnerOffset, 0);
+	self.Spinner:SetDesaturated(true);
+end
+
+function PerksProgramPurchaseButtonMixin:OnEvent(event, ...)
+	if event == "PERKS_PROGRAM_CURRENCY_REFRESH" then
+		self:UpdateState();
+	end
+end
+
+function PerksProgramPurchaseButtonMixin:ShowTooltip(tooltip)
+	if not self:IsEnabled() then
+		tooltip:SetOwner(self, "ANCHOR_LEFT", 0, 0);
+
+		local selectedProductInfo  = PerksProgramFrame:GetSelectedProduct();
+		if selectedProductInfo and selectedProductInfo.isPurchasePending then
+			AddPurchasePendingTooltipLines(tooltip);
+		elseif selectedProductInfo and (C_PerksProgram.GetCurrencyAmount() < selectedProductInfo.price) then
+			GameTooltip_AddNormalLine(tooltip, PERKS_PROGRAM_NOT_ENOUGH_CURRENCY, wrap);
+		else
+			GameTooltip_AddHighlightLine(tooltip, PERKS_PROGRAM_PURCHASING_UNAVAILABLE, wrap);
+		end
+
+		tooltip:Show();
+	end
+end
+
+function PerksProgramPurchaseButtonMixin:UpdateState()
+	local selectedProductInfo  = PerksProgramFrame:GetSelectedProduct();
+
+	local isPurchasePending = selectedProductInfo and selectedProductInfo.isPurchasePending;
+	self:SetText(isPurchasePending and PERKS_PROGRAM_PENDING or PERKS_PROGRAM_PURCHASE);
+	self.Spinner:SetShown(isPurchasePending);
+
+	local textFrame = self:GetFontString();
+	textFrame:ClearAllPoints();
+	if self.Spinner:IsShown() then
+		-- Center the text and the spinner
+		local extraOffset = -6; -- Noticed it looks better with this extra offset. This is probably due to spinner art having extra padding in it's textures.
+		textFrame:SetPoint("CENTER", self, "CENTER", self.spinnerWidth + self.spinnerOffset + extraOffset, 0);
+	else
+		textFrame:SetPoint("CENTER", self, "CENTER");
+	end
+
+	local hasErrorOccurred = PerksProgramFrame:GetServerErrorState();
+	local hasEnoughCurrency = selectedProductInfo and (C_PerksProgram.GetCurrencyAmount() >= selectedProductInfo.price);
+	local enabled = not hasErrorOccurred and hasEnoughCurrency and not isPurchasePending;
+
+	self:SetEnabled(enabled);
+
+	if enabled then
+		GlowEmitterFactory:SetHeight(95);
+		GlowEmitterFactory:SetOffset(23.5, -0.5);
+
+		GlowEmitterFactory:Show(self, GlowEmitterMixin.Anims.GreenGlow);
+	else
+		GlowEmitterFactory:Hide(self);
+	end
+end
+
+----------------------------------------------------------------------------------
+-- PerksProgramRefundButtonMixin
+----------------------------------------------------------------------------------
+PerksProgramRefundButtonMixin = {};
+function PerksProgramRefundButtonMixin:ShowTooltip(tooltip)
+	if not self:IsEnabled() then
+		tooltip:SetOwner(self, "ANCHOR_LEFT", 0, 0);
+		GameTooltip_AddHighlightLine(tooltip, PERKS_PROGRAM_REFUND_UNAVAILABLE, wrap);
+		tooltip:Show();
+	end
 end
 
 ----------------------------------------------------------------------------------
@@ -283,227 +678,346 @@ function PerksProgramDividerFrameMixin:OnProductSelectedAfterModel(data)
 	self:SetShown(showDivider);
 end
 
-----------------------------------------------------------------------------------
--- PerksProgramCarouselFrameMixin
-----------------------------------------------------------------------------------
-PerksProgramCarouselFrameMixin = {};
-function PerksProgramCarouselFrameMixin:OnLoad()
-	EventRegistry:RegisterCallback("PerksProgramModel.OnProductSelectedAfterModel", self.OnProductSelectedAfterModel, self);
+local function PerksProgramProductDetails_ProcessLines(itemID, perksVendorCategoryID)
+	local tooltipLineTypes = { Enum.TooltipDataLineType.RestrictedRaceClass,
+								Enum.TooltipDataLineType.RestrictedFaction,
+								Enum.TooltipDataLineType.RestrictedSkill,
+								Enum.TooltipDataLineType.RestrictedPVPMedal,
+								Enum.TooltipDataLineType.RestrictedReputation,
+								Enum.TooltipDataLineType.RestrictedLevel, };
 
-	local function OnCarouselButtonClick(button, buttonName, down)
-		PlaySound(SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_ON);
-		self.carouselIndex = self.carouselIndex + button.incrementAmount;
-		self.carouselIndex = Clamp(self.carouselIndex, 1, #self.items);
-		self:UpdateCarousel();
-		EventRegistry:TriggerEvent("PerksProgram.OnCarouselUpdated", self.data, self.perksVendorCategoryID, self.carouselIndex);
+	if IsPerksVendorCategoryTransmog(perksVendorCategoryID) then
+		table.insert(tooltipLineTypes, Enum.TooltipDataLineType.EquipSlot);
 	end
-	self.IncrementButton.incrementAmount = 1;
-	self.IncrementButton:SetScript("OnClick", OnCarouselButtonClick );
-	self.DecrementButton.incrementAmount = -1;
-	self.DecrementButton:SetScript("OnClick", OnCarouselButtonClick );
-end
 
-function PerksProgramCarouselFrameMixin:OnProductSelectedAfterModel(data)	
-	local perksVendorCategoryID = data.perksVendorCategoryID;
-	local items = nil;
-
-	if perksVendorCategoryID == Enum.PerksVendorCategoryType.Mount then
-		items = data.creatureDisplays;
-	elseif perksVendorCategoryID == Enum.PerksVendorCategoryType.Pet then
-		items = nil; -- not yet
-	elseif perksVendorCategoryID == Enum.PerksVendorCategoryType.Toy then
-		items = nil; -- not yet
-	elseif perksVendorCategoryID == Enum.PerksVendorCategoryType.Transmog or perksVendorCategoryID == Enum.PerksVendorCategoryType.Transmogset then
-		local itemModifiedAppearanceIDs = data and C_TransmogSets.GetAllSourceIDs(data.transmogSetID);
-		if itemModifiedAppearanceIDs and PerksProgramUtil.ItemAppearancesHaveSameCategory(itemModifiedAppearanceIDs) then				
-			items = itemModifiedAppearanceIDs;
-		end
+	local result = TooltipUtil.FindLinesFromGetter(tooltipLineTypes, "GetItemByID", itemID);
+	if not result then
+		return "";
 	end
-	self:SetCarouselItems(data, items, perksVendorCategoryID);
-end
 
-function PerksProgramCarouselFrameMixin:UpdateCarouselText()
-	local carouselText = format(PERKS_PROGRAM_CAROUSEL_INDEX, self.carouselIndex, #self.items);
-	self.CarouselText:SetText(carouselText);
-end
-
-function PerksProgramCarouselFrameMixin:UpdateCarouselButtons()
-	local count = #self.items;
-	local enablePreviousButton = self.carouselIndex > 1;
-	local enableNextButton = self.carouselIndex < count;
-	self.DecrementButton:SetEnabled(enablePreviousButton);
-	self.IncrementButton:SetEnabled(enableNextButton);
-end
-
-function PerksProgramCarouselFrameMixin:UpdateCarousel()
-	self:UpdateCarouselText();
-	self:UpdateCarouselButtons();
-end
-
-function PerksProgramCarouselFrameMixin:SetCarouselItems(data, items, perksVendorCategoryID)
-	self.carouselIndex = 1;	
-	self.data = data;
-	self.items = items;
-	self.perksVendorCategoryID = perksVendorCategoryID;
-	local count = items and #items or 0;
-	local showCarousel = count > 1;
-
-	if showCarousel then
-		self:UpdateCarousel();
-		EventRegistry:TriggerEvent("PerksProgram.OnCarouselUpdated", self.data, self.perksVendorCategoryID, self.carouselIndex);
-	end
-	self:SetShown(showCarousel);
-end
-
-----------------------------------------------------------------------------------
--- PerksProgramFrameFrozenItemMixin
-----------------------------------------------------------------------------------
-PerksProgramFrameFrozenItemMixin = {};
-function PerksProgramFrameFrozenItemMixin:OnLoad()
-	self:RegisterEvent("PERKS_PROGRAM_SET_FROZEN_ITEM");
-	self:RegisterEvent("PERKS_PROGRAM_DATA_SPECIFIC_ITEM_REFRESH");
-	local frozenVendorItemInfo = C_PerksProgram.GetFrozenPerksVendorItemInfo();
-	self:SetupFrozenVendorItem(frozenVendorItemInfo);
-end
-
-function PerksProgramFrameFrozenItemMixin:OnEvent(event, ...)
-	if event == "PERKS_PROGRAM_DATA_SPECIFIC_ITEM_REFRESH" or event == "PERKS_PROGRAM_SET_FROZEN_ITEM" then
-		local updatedVendorItemID = ...;
-		local frozenVendorItemInfo = C_PerksProgram.GetFrozenPerksVendorItemInfo();
-		self:SetupFrozenVendorItem(frozenVendorItemInfo);
-	end
-end
-
-function PerksProgramFrameFrozenItemMixin:SetupFrozenVendorItem(frozenVendorItemInfo)
-	local itemID = frozenVendorItemInfo and frozenVendorItemInfo.itemID or nil;
-	if itemID and itemID > 0 then
-		local iconTexture = C_Item.GetItemIconByID(itemID);
-		self.FrozenButton.FrozenSlot:SetTexture(iconTexture);
-		self.FrozenButton.HighlightTexture:SetTexture(iconTexture);
-
-		-- The frozen item UI could be showing an item that is pending to be frozen, but is not yet frozen (needing user confirmation).
-		-- In that case, we do not want the text to say that it is currently frozen.
-		local currentFrozenVendorItemInfo = C_PerksProgram.GetFrozenPerksVendorItemInfo();
-		local currentFrozenItemID = currentFrozenVendorItemInfo and currentFrozenVendorItemInfo.itemID or nil;
-		local frozenText = NORMAL_FONT_COLOR:WrapTextInColorCode(frozenVendorItemInfo.name);
-		if itemID == currentFrozenItemID then
-			frozenText = format(PERKS_PROGRAM_FROZEN_ITEM_SET, NORMAL_FONT_COLOR:WrapTextInColorCode(frozenVendorItemInfo.name));
-			self.FrozenButton:ShowItemFrozen(true);
-			self:ShowFreezeBG(true);
+	local equipSlotLines = {};
+	local otherLines = {};
+	for i, lineData in ipairs(result) do
+		if lineData.type == Enum.TooltipDataLineType.EquipSlot then
+			if lineData.rightText and lineData.leftText then
+				local lineText = lineData.rightText.." ".."("..lineData.leftText..")";
+				local color = (lineData.isValidItemType and lineData.isValidInvSlot) and WHITE_FONT_COLOR or RED_FONT_COLOR;
+				lineText = color:WrapTextInColorCode(lineText);
+				table.insert(equipSlotLines, lineText);
+			elseif lineData.leftText then
+				local lineText = lineData.leftColor:WrapTextInColorCode(lineData.leftText);
+				table.insert(equipSlotLines, lineText);
+			end
 		else
-			self.FrozenButton:ShowItemFrozen(false);
-			self:ShowFreezeBG(false);
+			if lineData.leftText then
+				local lineText = lineData.leftColor:WrapTextInColorCode(lineData.leftText);
+				table.insert(otherLines, lineText);
+			end
 		end
-
-		self.Label:SetText(frozenText);
-	else
-		-- Check to see if we are going from a frozen item to no frozen item.  If so play the 'unfreeze' fx for the transition.
-		if self.FrozenButton.itemID then
-			self.FrozenButton.UnfrozenSlot:SetTexture(self.FrozenButton.FrozenSlot:GetTexture());
-			self.UnfreezeAnim:Restart();
-		else
-			self.FrozenButton:ShowItemFrozen(false);
-			self:ShowFreezeBG(false);
-		end
-
-		self.FrozenButton.FrozenSlot:SetAtlas("perks-slot-empty", TextureKitConstants.UseAtlasSize);
-		self.FrozenButton.HighlightTexture:SetAtlas("perks-slot-empty", TextureKitConstants.UseAtlasSize);
-
-		self.Label:SetText(PERKS_PROGRAM_FREEZE_ITEM_INSTRUCTIONS);
 	end
-	self.FrozenButton.itemID = itemID;
-end
 
-function PerksProgramFrameFrozenItemMixin:SetupConfirmOverrideFrozenItem()
-	-- User could trigger an override while the freeze anims are still playing out.
-	self.FrozenButton.ConfirmedFreezeAnim:Stop();
-	self.ConfirmedBackgroundFreezeAnim:Stop();
-
-	self.FrozenButton:ShowItemGlow(true);
-	self.FrozenButton:ShowItemFrozen(false);
-	self:ShowFreezeBG(false);
-	self.PendingFreezeAnim:Restart();
-
-	-- Update frozen slot to show icon/text of potential new frozen item.
-	local draggedVendorItemID = C_PerksProgram.GetDraggedPerksVendorItem();
-	local draggedVendorItemInfo = C_PerksProgram.GetVendorItemInfo(draggedVendorItemID);
-	self:SetupFrozenVendorItem(draggedVendorItemInfo);
-
-	PerksProgramFrame:ConfirmOverrideFrozenItem();
-end
-
-function PerksProgramFrameFrozenItemMixin:TriggerFreezeItem()
-	self.FrozenButton:ShowItemGlow(false);
-	self.FrozenButton.ConfirmedFreezeAnim:Restart();
-	self.ConfirmedBackgroundFreezeAnim:Restart();
-end
-
--- Only pieces that stay visible once the related animation would be complete.
-function PerksProgramFrameFrozenItemMixin:ShowFreezeBG(show)
-	self.FrostBG:SetAlpha(show and .35 or 0);
-	self.FrostLabelBG:SetAlpha(show and .22 or 0);
+	local description = "\n";
+	local function AddLinesToDescription(linesTable)
+		for index, lineText in ipairs(linesTable) do
+			description = description.."\n"..lineText;
+		end
+	end
+	AddLinesToDescription(otherLines);
+	AddLinesToDescription(equipSlotLines);
+	return description;
 end
 
 ----------------------------------------------------------------------------------
--- PerksProgramFrameDragDropMixin
+-- PerksProgramSetDetailsListMixin
 ----------------------------------------------------------------------------------
-PerksProgramFrameDragDropMixin = {};
-function PerksProgramFrameDragDropMixin:OnLoad()
-	self:RegisterForDrag("LeftButton");
-	self.tooltip = PerksProgramFrame.PerksProgramTooltip;
+
+PerksProgramSetDetailsListMixin = {}
+
+local function ConvertInvTypeToSelectionKey(invType)
+	if invType == "INVTYPE_SHIELD" or invType == "INVTYPE_WEAPONOFFHAND" or invType == "INVTYPE_HOLDABLE" then
+		return "SELECTIONTYPE_OFFHAND";
+	end
+
+	if invType == "INVTYPE_2HWEAPON" or invType == "INVTYPE_RANGED" or invType == "INVTYPE_RANGEDRIGHT" or invType == "INVTYPE_THROWN" then
+		return "SELECTIONTYPE_TWOHAND";
+	end
+	
+	if invType == "INVTYPE_WEAPON" or invType == "INVTYPE_WEAPONMAINHAND" then
+		return "SELECTIONTYPE_MAINHAND";
+	end
+
+	return string.gsub(invType, "INVTYPE", "SELECTIONTYPE");
 end
 
-function PerksProgramFrameDragDropMixin:OnEnter()
-	if self.itemID then
-		self.tooltip:SetOwner(self, "ANCHOR_RIGHT", -16, 0);
-		self.tooltip:SetItemByID(self.itemID);
-		self.tooltip:Show();
+local function DeselectItemByType(selectionList, selectionType)
+	if selectionList[selectionType] then
+		selectionList[selectionType].elementData.selected = false;
+		selectionList[selectionType] = nil;
 	end
 end
 
-function PerksProgramFrameDragDropMixin:OnLeave()
-	self.tooltip:Hide();
+local function SelectItem(selectionList, selectionType, itemToSelect)
+	if selectionType == "SELECTIONTYPE_TWOHAND" then
+		DeselectItemByType(selectionList, "SELECTIONTYPE_OFFHAND");
+		DeselectItemByType(selectionList, "SELECTIONTYPE_MAINHAND");
+	elseif selectionType == "SELECTIONTYPE_MAINHAND" or selectionType == "SELECTIONTYPE_OFFHAND" then
+		DeselectItemByType(selectionList, "SELECTIONTYPE_TWOHAND");
+	end
+
+	DeselectItemByType(selectionList, selectionType)
+	selectionList[selectionType] = itemToSelect;
 end
 
-function PerksProgramFrameDragDropMixin:OnClick(button, down)
-	self:TriggerConfirmOverrideFrozenItem();
+function PerksProgramSetDetailsListMixin:OnLoad()
+	local DefaultPad = 0;
+	local DefaultSpacing = 1;
+	local view = CreateScrollBoxListLinearView(DefaultPad, DefaultPad, DefaultPad, DefaultPad, DefaultSpacing);
+	view:SetElementInitializer("PerksProgramDetailsFrameScrollButtonTemplate", function(button, elementData)
+		button:InitItem(elementData);
+		button:SetScript("OnClick", function(button, buttonName, down)
+			self:OnItemSelected(button, elementData);
+		end);
+	end);
+
+	ScrollUtil.InitScrollBoxListWithScrollBar(self.ScrollBox, self.ScrollBar, view);
+	--local scrollBoxAnchorsWithBar = {
+	--	CreateAnchor("TOPLEFT", -16, 0),
+	--	CreateAnchor("BOTTOMRIGHT", 0, 0);
+	--};
+	--local scrollBoxAnchorsWithoutBar = {
+	--	CreateAnchor("TOPLEFT", 0, 0),
+	--	CreateAnchor("BOTTOMRIGHT", 0, 0);
+	--};
+	--ScrollUtil.AddManagedScrollBarVisibilityBehavior(self.ScrollBox, self.ScrollBar, scrollBoxAnchorsWithBar, scrollBoxAnchorsWithoutBar);
+
+	EventRegistry:RegisterCallback("PerksProgram.UpdateDetailsSetScollBox", self.Init, self);
 end
 
-function PerksProgramFrameDragDropMixin:OnReceiveDrag()
-	self:TriggerConfirmOverrideFrozenItem();
+function PerksProgramSetDetailsListMixin:ClearData()
+	self.data = {};
+	self.setID = 0;
+	self.perksVendorCategoryID = 0;
+	self.selectedItems = {};
+	self.subItems = {};
 end
 
-function PerksProgramFrameDragDropMixin:TriggerConfirmOverrideFrozenItem()
-	local currentFrozenVendorItemInfo = C_PerksProgram.GetFrozenPerksVendorItemInfo();
-	local draggedVendorItemID = C_PerksProgram.GetDraggedPerksVendorItem();
-
-	if draggedVendorItemID == 0 then
+function PerksProgramSetDetailsListMixin:Init(data)
+	if not data or not #data.subItems == 0 or not data.subItemsLoaded then
+		self:ClearData();
+		self:Hide();
 		return;
 	end
 
-	if not currentFrozenVendorItemInfo or currentFrozenVendorItemInfo.itemID ~= draggedVendorItemID then
-		PerksProgramFrame.ProductsFrame.ProductsScrollBoxContainer.PerksProgramHoldFrame.FrozenItemFrame:SetupConfirmOverrideFrozenItem();
+	self:Show();
+
+	if self.data and self.data.perksVendorItemID == data.perksVendorItemID then
+		self:RefreshItems();
+		self:UpdateSelectedAppearances();
+
+		return;
 	end
+
+	self.data = data;
+	self.setID = data.transmogSetID;
+	self.perksVendorCategoryID = data.perksVendorCategoryID;
+	self.selectedItems = {};
+	self.subItems = data.subItems;
+
+	local dataProvider = CreateDataProvider();
+	for index, subItem in ipairs(self.subItems) do
+		if subItem.itemID then
+			local tooltipLineTypes = { Enum.TooltipDataLineType.EquipSlot, };
+			local result = TooltipUtil.FindLinesFromGetter(tooltipLineTypes, "GetItemByID", subItem.itemID);
+			if result and #result ~= 0 then
+				local coloredItemName = ITEM_QUALITY_COLORS[subItem.quality].color:WrapTextInColorCode(subItem.name);
+			
+				local itemIcon = C_Item.GetItemIconByID(subItem.itemID);
+				local selectionType = ConvertInvTypeToSelectionKey(subItem.invType);
+
+				local selected = false;
+				if selectionType == "SELECTIONTYPE_TWOHAND" then 
+					selected = not self.selectedItems["SELECTIONTYPE_TWOHAND"] and not self.selectedItems["SELECTIONTYPE_MAINHAND"] and not self.selectedItems["SELECTIONTYPE_OFFHAND"];
+				else
+					selected = not self.selectedItems[selectionType];
+				end
+
+				local elementData = {
+					 selected = selected,
+					 itemName = coloredItemName, 
+					 itemSlot = result[1],
+					 itemIcon = itemIcon,
+					 itemQuality = subItem.quality,
+					 itemOverlay = "CosmeticIconFrame",
+					 itemID = subItem.itemID,
+					 itemModifiedAppearanceID = subItem.itemAppearanceID,
+					 selectionType = selectionType,
+				};
+
+				dataProvider:Insert(elementData);
+
+				if selected then
+					SelectItem(self.selectedItems, selectionType, { itemID=subItem.itemID, elementData=elementData });
+				end
+			end
+		end
+	end
+
+	self.ScrollBox:SetDataProvider(dataProvider, ScrollBoxConstants.RetainScrollPosition);
+
+	-- Makes it so the ScrollBox resizes if there are less than 3 elements in the list
+	local individualItemHeight = self.ScrollBox:GetElementExtent(1);
+	self:SetHeight(min(#self.subItems * individualItemHeight + #self.subItems, 3 * individualItemHeight + individualItemHeight / 2 + 3));
+
+	if #self.subItems > 3 then
+		self.ScrollBar:Show();
+		self.ScrollBox:SetPoint("TOPLEFT", -16, 0);
+	else
+		self.ScrollBar:Hide();
+		self.ScrollBox:SetPoint("TOPLEFT", 0, 0);
+	end
+
+	self:RefreshItems();
+	self:UpdateSelectedAppearances();
 end
 
-function PerksProgramFrameDragDropMixin:TriggerCancelFrozenItem()
-	self:ShowItemGlow(false);
-	self.OverlayFrozenSlot:SetTexture(self.FrozenSlot:GetTexture());
-	self.CancelledFreezeAnim:Restart();
+function PerksProgramSetDetailsListMixin:OnItemSelected(element, elementData)
+	for selectionType, selectedElementData in pairs(self.selectedItems) do
+		if selectedElementData.itemID == elementData.itemID then
+			if elementData.selected then
+				self.selectedItems[selectionType] = nil;
+				element:SetSelected(false);
+				self:UpdateSelectedAppearances();
+
+				return;
+			end
+
+			break;
+		end
+	end
+
+	SelectItem(self.selectedItems, elementData.selectionType, { itemID = elementData.itemID, elementData = elementData });
+	element:SetSelected(true);
+	self:RefreshItems();
+	self:UpdateSelectedAppearances();
 end
 
--- Only pieces that stay visible once the related animation would be complete.
-function PerksProgramFrameDragDropMixin:ShowItemGlow(show)
-	self.ItemGlow:SetAlpha(show and 1 or 0);
+function PerksProgramSetDetailsListMixin:RefreshItems()
+	self.ScrollBox:ForEachFrame(function(element, elementData)
+		element:Refresh();
+	end);
 end
 
--- Only pieces that stay visible once the related animation would be complete.
-function PerksProgramFrameDragDropMixin:ShowItemFrozen(show)
-	local alpha = show and 1 or 0;
-	self.FrostFrame:SetAlpha(alpha);
-	self.Frost1:SetAlpha(alpha);
-	self.Frost2:SetAlpha(alpha);
-	self.Frost3:SetAlpha(alpha);
+function PerksProgramSetDetailsListMixin:UpdateSelectedAppearances()
+	local selectedItemModifiedAppearances = {};
+	for _, itemData in pairs(self.selectedItems) do
+		tinsert(selectedItemModifiedAppearances, itemData.elementData.itemModifiedAppearanceID);
+	end
+
+	EventRegistry:TriggerEvent("PerksProgram.OnItemSetSelectionUpdated", self.data, self.perksVendorCategoryID, selectedItemModifiedAppearances);
+end
+
+----------------------------------------------------------------------------------
+-- PerksProgramSetDetailsItemMixin
+----------------------------------------------------------------------------------
+PerksProgramSetDetailsItemMixin = {}
+
+function PerksProgramSetDetailsItemMixin:InitItem(elementData)
+	self:Show();
+	self.elementData = elementData;
+	self:SetSelected(self.elementData.selected);
+
+	local itemSlot = elementData.itemSlot;
+	local leftText = itemSlot.leftText or "";
+	local rightText = itemSlot.rightText or "";
+
+	local wrapLeftInColor = itemSlot.leftColor and not itemSlot.leftColor:IsRGBEqualTo(WHITE_FONT_COLOR);
+	local wrapRightInColor = itemSlot.rightColor and not itemSlot.rightColor:IsRGBEqualTo(WHITE_FONT_COLOR);
+
+	if wrapLeftInColor then
+		leftText = itemSlot.leftColor:WrapTextInColorCode(itemSlot.leftText);
+	end
+	if wrapRightInColor then
+		rightText = itemSlot.rightColor:WrapTextInColorCode(itemSlot.rightText);
+	end
+
+	self.ItemSlotLeft:SetText(leftText);
+	self.ItemSlotRight:SetText(rightText);
+	
+	-- Want to reset to the initial widths everytime if it's been overriden once
+	if self.initialRightWidth then
+		self.ItemSlotRight:SetWidth(self.initialRightWidth);
+		self.ItemSlotLeft:SetWidth(self.initialLeftWidth);
+	end
+	
+	-- This code is allowing for the slot text to be longer if only the left or right text exist.
+	-- I.E. (- is equivalent to empty space. | is the divide between left and right text)
+	-- L&R text: One-hand--- | ----Sword
+	-- L text:   One-hand---------------
+	-- R text:   ------------------Sword
+	if rightText == "" or leftText == "" then
+		self.initialRightWidth = self.ItemSlotRight:GetWidth();
+		self.initialLeftWidth = self.ItemSlotLeft:GetWidth();
+		if rightText == "" then
+			self.ItemSlotLeft:SetWidth(self.initialLeftWidth + self.initialRightWidth);
+		else
+			self.ItemSlotRight:SetWidth(self.initialLeftWidth + self.initialRightWidth);
+		end
+	end
+
+	self.Icon:SetTexture(elementData.itemIcon);
+	self.IconBorder:SetAtlas(LOOT_BORDER_BY_QUALITY[elementData.itemQuality] or LOOT_BORDER_BY_QUALITY[Enum.ItemQuality.Uncommon]);
+	self.IconOverlay:SetAtlas(elementData.itemOverlay);
+end
+
+function PerksProgramSetDetailsItemMixin:Refresh()
+	self.SelectedTexture:SetShown(self.elementData.selected);
+	self.ItemName:SetText(self.elementData.itemName);
+end
+
+function PerksProgramSetDetailsItemMixin:SetSelected(selected)
+	self.elementData.selected = selected;
+	self:Refresh();
+end
+
+function PerksProgramSetDetailsItemMixin:OnEnter()
+	self.HighlightTexture:Show();
+
+	PerksProgramTooltip:SetOwner(self, "ANCHOR_LEFT", -8, -20);
+	PerksProgramTooltip:SetItemByID(self.elementData.itemID);
+	PerksProgramTooltip:Show();
+end
+
+function PerksProgramSetDetailsItemMixin:OnLeave()
+	self.HighlightTexture:Hide();
+	PerksProgramTooltip:Hide();
+end
+
+----------------------------------------------------------------------------------
+-- PerksDetailsScrollBarMixin
+----------------------------------------------------------------------------------
+
+PerksDetailsScrollBarMixin = {}
+
+function PerksDetailsScrollBarMixin:OnShow()
+	EventRegistry:TriggerEvent("PerksProgram.SetDetailsScrollShownUpdated", true);
+end
+
+function PerksDetailsScrollBarMixin:OnHide()
+	EventRegistry:TriggerEvent("PerksProgram.SetDetailsScrollShownUpdated", false);
+end
+
+----------------------------------------------------------------------------------
+-- PerksDetailsScrollBoxFadeMixin
+----------------------------------------------------------------------------------
+
+PerksDetailsScrollBoxFadeMixin = {}
+
+function PerksDetailsScrollBoxFadeMixin:OnLoad()
+	EventRegistry:RegisterCallback("PerksProgram.SetDetailsScrollShownUpdated", self.UpdateShown, self);
+end
+
+function PerksDetailsScrollBoxFadeMixin:UpdateShown(shown)
+	self:SetShown(shown);
 end
 
 ----------------------------------------------------------------------------------
@@ -579,6 +1093,7 @@ end
 PerksProgramProductDetailsFrameMixin = {};
 function PerksProgramProductDetailsFrameMixin:OnLoad()
 	EventRegistry:RegisterCallback("PerksProgramModel.OnProductSelectedAfterModel", self.OnProductSelectedAfterModel, self);
+	EventRegistry:RegisterCallback("PerksProgram.OnProductInfoChanged", self.OnProductInfoChanged, self);
 end
 
 function PerksProgramProductDetailsFrameMixin:OnShow()
@@ -586,69 +1101,73 @@ function PerksProgramProductDetailsFrameMixin:OnShow()
 	self.DescriptionText:SetFontObject(newFont);
 end
 
-local restrictions = { Enum.TooltipDataLineType.RestrictedRaceClass, Enum.TooltipDataLineType.RestrictedFaction, Enum.TooltipDataLineType.RestrictedSkill,
-						Enum.TooltipDataLineType.RestrictedPVPMedal, Enum.TooltipDataLineType.RestrictedReputation, Enum.TooltipDataLineType.RestrictedSpellKnown,
-						Enum.TooltipDataLineType.RestrictedLevel, Enum.TooltipDataLineType.EquipSlot};
-local function PerksProgramProductDetails_ProcessLines(data)
-	local newDescription = data.description;
-	local result = TooltipUtil.FindLinesFromGetter(restrictions, "GetItemByID", data.itemID);
-	if result then
-		for i, lineData in ipairs(result) do
-			if lineData.type == Enum.TooltipDataLineType.EquipSlot then
+function PerksProgramProductDetailsFrameMixin:SetData(data)
+	self.data = data;
 
-				if not lineData.isValidInvSlot or not lineData.isValidItemType then
-					if lineData.rightText and lineData.leftText then
-						local slotText = lineData.leftText;
-						local itemText = lineData.rightText;
-						
-						itemText = lineData.rightColor:WrapTextInColorCode(itemText);
-						newDescription = newDescription.."\n"..itemText;
-
-						slotText = "("..slotText..")";
-						slotText = lineData.leftColor:WrapTextInColorCode(slotText);
-						newDescription = newDescription.." "..slotText;
-					end
-				end
-			else
-				if lineData.leftText then
-					local restrictionText = lineData.leftText;
-					restrictionText = lineData.leftColor:WrapTextInColorCode(restrictionText);
-					newDescription = newDescription.."\n\n"..restrictionText;
-				end
-			end
-		end
+	if #self.data.subItems > 0 then
+		self:GetParent().SetDetailsScrollBoxContainer:Init(self.data);
+	else
+		self:GetParent().SetDetailsScrollBoxContainer:ClearData();
+		self:GetParent().SetDetailsScrollBoxContainer:Hide();
 	end
-	return newDescription;
+
+	self:Refresh();
 end
 
-function PerksProgramProductDetailsFrameMixin:OnProductSelectedAfterModel(data)
-	self.ProductNameText:SetText(data.name);
+function PerksProgramProductDetailsFrameMixin:Refresh()
+	if not self.data then
+		return;
+	end
+
+	self.ProductNameText:SetText(self.data.name);
 
 	local descriptionText;
-	local perksVendorCategoryID = data.perksVendorCategoryID;
+	local perksVendorCategoryID = self.data.perksVendorCategoryID;
 	if perksVendorCategoryID == Enum.PerksVendorCategoryType.Toy then		
-		local toyDescription, toyEffect = PerksProgramToy_ProcessLines(data);
+		local toyDescription, toyEffect = PerksProgramToy_ProcessLines(self.data);
 		if toyDescription and toyEffect then
-			descriptionText = toyDescription.."\n\n"..toyEffect;
+			descriptionText = GREEN_FONT_COLOR:WrapTextInColorCode(toyEffect).."\n\n"..toyDescription;
 		else
 			descriptionText = toyDescription;
 		end
 	else
-		descriptionText = PerksProgramProductDetails_ProcessLines(data);
+		local itemID = self.data.itemID;
+		descriptionText = self.data.description..PerksProgramProductDetails_ProcessLines(itemID, self.data.perksVendorCategoryID);
 	end
 	self.DescriptionText:SetText(descriptionText);
 
-	local categoryText = PerksProgramFrame:GetCategoryText(data.perksVendorCategoryID);
+	local categoryText = PerksProgramFrame:GetCategoryText(self.data.perksVendorCategoryID);
 	self.CategoryText:SetText(categoryText);
 
-	local timeToShow = PerksProgramFrame:FormatTimeLeft(data.timeRemaining, PerksProgramFrame.TimeLeftDetailsFormatter);
-	local timeTextColor = self.timeTextColor or WHITE_FONT_COLOR;
-	local timeValueColor = self.timeValueColor or WHITE_FONT_COLOR;	
-	local timeText = format(timeTextColor:WrapTextInColorCode(PERKS_PROGRAM_TIME_LEFT), timeValueColor:WrapTextInColorCode(timeToShow));
-	self.TimeRemaining:SetText(timeText);
+	local timeRemainingText;
+	if self.data.isFrozen then
+		timeRemainingText = format(WHITE_FONT_COLOR:WrapTextInColorCode(PERKS_PROGRAM_TIME_LEFT), PERKS_PROGRAM_FROZEN);
+	elseif self.data.purchased then
+		timeRemainingText = CreateAtlasMarkup("perks-owned-small", 18, 18).." "..GRAY_FONT_COLOR:WrapTextInColorCode(PERKS_PROGRAM_PURCHASED_TEXT);
+	else
+		local timeToShow = PerksProgramFrame:FormatTimeLeft(self.data.timeRemaining, PerksProgramFrame.TimeLeftDetailsFormatter);
+		local timeTextColor = self.timeTextColor or WHITE_FONT_COLOR;
+		local timeValueColor = self.timeValueColor or WHITE_FONT_COLOR;	
+		timeRemainingText = format(timeTextColor:WrapTextInColorCode(PERKS_PROGRAM_TIME_LEFT), timeValueColor:WrapTextInColorCode(timeToShow));
+	end
+	self.TimeRemaining:SetText(timeRemainingText);
+
 	self:MarkDirty();
 end
 
+function PerksProgramProductDetailsFrameMixin:OnProductSelectedAfterModel(data)
+	self:SetData(data);
+end
+
+function PerksProgramProductDetailsFrameMixin:OnProductInfoChanged(data)
+	if self.data and self.data.perksVendorItemID == data.perksVendorItemID then
+		self:SetData(data);
+	end
+end
+
+----------------------------------------------------------------------------------
+-- HeaderSortButtonMixin
+----------------------------------------------------------------------------------
 HeaderSortButtonMixin = {};
 function HeaderSortButtonMixin:OnLoad()
 	EventRegistry:RegisterCallback("PerksProgram.SortFieldSet", self.SortFieldSet, self);

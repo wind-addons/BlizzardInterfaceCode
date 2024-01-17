@@ -14,6 +14,7 @@ EDIT_MODE_MODERN_SYSTEM_MAP =
 				[Enum.EditModeActionBarSetting.IconPadding] = 2,
 				[Enum.EditModeActionBarSetting.HideBarArt] = 0,
 				[Enum.EditModeActionBarSetting.HideBarScrolling] = 0,
+				[Enum.EditModeActionBarSetting.AlwaysShowButtons] = 1,
 			},
 			anchorInfo = {
 				point = "BOTTOM",
@@ -511,7 +512,7 @@ EDIT_MODE_MODERN_SYSTEM_MAP =
 		settings = {
 			[Enum.EditModeMicroMenuSetting.Orientation] = Enum.MicroMenuOrientation.Horizontal,
 			[Enum.EditModeMicroMenuSetting.Order] = Enum.MicroMenuOrder.Default,
-			[Enum.EditModeMicroMenuSetting.Size] = 0,
+			[Enum.EditModeMicroMenuSetting.Size] = 6,
 			[Enum.EditModeMicroMenuSetting.EyeSize] = 10,
 		},
 		anchorInfo = {
@@ -628,6 +629,7 @@ EDIT_MODE_CLASSIC_SYSTEM_MAP =
 				[Enum.EditModeActionBarSetting.IconPadding] = 2,
 				[Enum.EditModeActionBarSetting.HideBarArt] = 0,
 				[Enum.EditModeActionBarSetting.HideBarScrolling] = 0,
+				[Enum.EditModeActionBarSetting.AlwaysShowButtons] = 1,
 			},
 			anchorInfo = {
 				point = "BOTTOM",
@@ -1125,7 +1127,7 @@ EDIT_MODE_CLASSIC_SYSTEM_MAP =
 		settings = {
 			[Enum.EditModeMicroMenuSetting.Orientation] = Enum.MicroMenuOrientation.Horizontal,
 			[Enum.EditModeMicroMenuSetting.Order] = Enum.MicroMenuOrder.Default,
-			[Enum.EditModeMicroMenuSetting.Size] = 0,
+			[Enum.EditModeMicroMenuSetting.Size] = 6,
 			[Enum.EditModeMicroMenuSetting.EyeSize] = 10,
 		},
 		anchorInfo = {

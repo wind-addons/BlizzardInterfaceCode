@@ -16,8 +16,6 @@ function MainMenuBarMixin:OnLoad()
 	MainMenuBar.ActionBarPageNumber.Text:SetText(GetActionBarPage());
 	MicroButtonAndBagsBar:SetFrameLevel(self:GetFrameLevel()+2);
 	self:UpdateEndCaps();
-
-	self:SetShowGrid(true, ACTION_BUTTON_SHOW_GRID_REASON_CVAR);
 end
 
 function MainMenuBarMixin:OnShow()
@@ -234,7 +232,7 @@ function MainMenuBarPerformanceBarFrame_OnEnter(self)
 	UpdateAddOnMemoryUsage();
 	local totalMem = 0;
 
-	for i=1, GetNumAddOns(), 1 do
+	for i=1, C_AddOns.GetNumAddOns(), 1 do
 		local mem = GetAddOnMemoryUsage(i);
 		totalMem = totalMem + mem;
 		for j=1, NUM_ADDONS_TO_DISPLAY, 1 do
@@ -242,7 +240,7 @@ function MainMenuBarPerformanceBarFrame_OnEnter(self)
 				for k=NUM_ADDONS_TO_DISPLAY, 1, -1 do
 					if( k == j ) then
 						topAddOns[k].value = mem;
-						topAddOns[k].name = GetAddOnInfo(i);
+						topAddOns[k].name = C_AddOns.GetAddOnInfo(i);
 						break;
 					elseif( k ~= 1 ) then
 						topAddOns[k].value = topAddOns[k-1].value;
@@ -319,6 +317,43 @@ function MainMenuBarMixin:EditModeSetScale(newScale)
 	-- For end caps and page number, only scale down, not up
 	self.EndCaps:SetScale(newScale < 1 and newScale or 1);
 	self.ActionBarPageNumber:SetScale(newScale < 1 and newScale or 1);
+end
+
+function MainMenuBarMixin:UpdateDividers()
+	if not self.HorizontalDividersPool then
+		self.HorizontalDividersPool = CreateFramePool("FRAME", self, "HorizontalDividerTemplate");
+		self.VerticalDividersPool = CreateFramePool("FRAME", self, "VerticalDividerTemplate");
+	end
+	self.HorizontalDividersPool:ReleaseAll();
+	self.VerticalDividersPool:ReleaseAll();
+
+	if self.hideBarArt or self.numRows > 1 or self.buttonPadding > self.minButtonPadding then
+		return;
+	end
+
+	local dividersPool = self.isHorizontal and self.HorizontalDividersPool or self.VerticalDividersPool;
+	local wasLastButtonShown = false;
+	for i, actionButton in pairs(self.actionButtons) do
+		if actionButton:IsShown() then
+			if wasLastButtonShown then
+				local divider = dividersPool:Acquire();
+				divider:ClearAllPoints();
+				if self.isHorizontal then
+					divider:SetPoint("TOP", actionButton, "TOP", 0, 0);
+					divider:SetPoint("BOTTOM", actionButton, "BOTTOM", 0, 0);
+					divider:SetPoint("RIGHT", actionButton, "LEFT", 5, 0);
+				else
+					divider:SetPoint("LEFT", actionButton, "LEFT", 0, 0);
+					divider:SetPoint("RIGHT", actionButton, "RIGHT", 0, 0);
+					divider:SetPoint("BOTTOM", actionButton, "TOP", 0, -5);
+				end
+				divider:Show();
+			end
+			wasLastButtonShown = true;
+		else
+			wasLastButtonShown = false;
+		end
+	end
 end
 
 MainActionBarUpButtonMixin = {}
