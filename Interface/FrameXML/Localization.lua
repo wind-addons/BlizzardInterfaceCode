@@ -1,17 +1,12 @@
-
+﻿
 -- This is a symbol available for people who need to know the locale (separate from GetLocale())
-LOCALE_zhTW = true;
+LOCALE_zhCN = true;
 USE_IME = true;
-
+STATFRAME_STATTEXT_FONT_OVERRIDE = TextStatusBarText;
 CLOCK_TICKER_Y_OVERRIDE = 2;
-GUILD_APPLICANT_LEVEL_TEXT_Y_OVERRIDE = 1;
+GUILD_APPLICANT_LEVEL_TEXT_Y_OVERRIDE = 1
 FIRST_NUMBER_CAP_VALUE = 10000;
 COLLAPSE_ORDER_HALL_FOLLOWER_ITEM_LEVEL_DISPLAY = true;
-
-SMALLER_AURA_DURATION_FONT_MIN_THRESHOLD = 60 * 60; -- greater than 1 hour
-SMALLER_AURA_DURATION_FONT_MAX_THRESHOLD = 24 * 60 * 60; -- less than 24 hours
-SMALLER_AURA_DURATION_FONT = "GameFontHighlightSmall2";
-SMALLER_AURA_DURATION_OFFSET_Y = -2;
 
 function Localize()
 	-- Put all locale specific string adjustments here
@@ -40,9 +35,6 @@ end
 function LocalizeFrames()
 	-- Put all locale specific UI adjustments here
 
-	-- Hide billing help option.  If the number of help options changes this will need to change also.
-	CATEGORY_TO_NOT_DISPLAY = 9;
-
 	-- Hide profanity checkbox
 	-- UIOptionsFrameCheckButton5:Hide();
 
@@ -56,6 +48,10 @@ function LocalizeFrames()
 
 	--Fix the positioning of the dropdown list
 	WhoFrameDropDown:SetPoint("TOPLEFT", WhoFrameColumnHeader2, "TOPLEFT", -15, 1);
+
+	-- Guild Member Detail Window Custom Sizing
+	GUILD_DETAIL_NORM_HEIGHT = 222
+	GUILD_DETAIL_OFFICER_HEIGHT = 285
 
 	-- Mailframe tabs
 	for i=1, (MailFrame.numTabs or 0) do
@@ -71,28 +67,52 @@ function LocalizeFrames()
 	-- Chat Editbox
 	ChatEdit_LanguageShow();
 
-	-- Disable knowledge base (leaving this here, just in case we need to roll back quickly)
-	--HelpMicroButton:SetScript("OnClick", ToggleHelpFrame);
-	--HelpFrameHomeCancel:SetScript("OnClick", ToggleHelpFrame);
+	-- Pet Frame
+	PetFrameHealthBarText:SetPoint("CENTER", PetFrameHealthBarText:GetParent(), "CENTER", 0, 1);
+	PetFrameHealthBarTextLeft:SetPoint("LEFT", PetFrameHealthBarText:GetParent(), "LEFT", 0, 1);
+	PetFrameHealthBarTextRight:SetPoint("RIGHT", PetFrameHealthBarText:GetParent(), "RIGHT", 0, 1);
+	PetFrameManaBarText:SetPoint("CENTER", PetFrameManaBarText:GetParent(), "CENTER", 2, 1);
+	PetFrameManaBarTextLeft:SetPoint("LEFT", PetFrameManaBarText:GetParent(), "LEFT", 4, 1);
+	PetFrameManaBarTextRight:SetPoint("RIGHT", PetFrameManaBarText:GetParent(), "RIGHT", 0, 1);
 
 	-- Player Frame
 	PlayerLevelText:SetPoint("TOPRIGHT", -24.5, -26);
 
+	local playerFrameHealthBar = PlayerFrame_GetHealthBar();
+	playerFrameHealthBar.HealthBarText:SetPoint("CENTER", 0, 1);
+	playerFrameHealthBar.LeftText:SetPoint("LEFT", 2, 1);
+	playerFrameHealthBar.RightText:SetPoint("RIGHT", -2, 1);
+
+	local playerFrameManaBar = PlayerFrame_GetManaBar();
+	playerFrameManaBar.ManaBarText:SetPoint("CENTER", 0, 1);
+	playerFrameManaBar.LeftText:SetPoint("LEFT", 2, 1);
+	playerFrameManaBar.RightText:SetPoint("RIGHT", -2, 1);
+
 	-- Target Frame
 	local targetFrameContentMain = TargetFrame.TargetFrameContent.TargetFrameContentMain;
 	targetFrameContentMain.LevelText:SetPoint("TOPLEFT", targetFrameContentMain.ReputationColor, "TOPRIGHT", -133, 1);
-	targetFrameContentMain.Name:SetPoint("TOPLEFT", targetFrameContentMain.ReputationColor, "TOPRIGHT", -106, 2);
-	targetFrameContentMain.HealthBar.DeadText:SetPoint("CENTER", 0, 2);
-	targetFrameContentMain.HealthBar.UnconsciousText:SetPoint("CENTER", 0, 2);
+	targetFrameContentMain.Name:SetPoint("TOPLEFT", targetFrameContentMain.ReputationColor, "TOPRIGHT", -106, 1);
 
-	-- Trade Frame
-	TradeFramePlayerEnchantText:SetPoint("TOPLEFT", TradeFrame, 26, -371);
+	local targetFrameHealthBar = targetFrameContentMain.HealthBar;
+	targetFrameHealthBar.HealthBarText:SetPoint("CENTER", 0, 2);
+	targetFrameHealthBar.LeftText:SetPoint("LEFT", 2, 2);
+	targetFrameHealthBar.RightText:SetPoint("RIGHT", -5, 2);
+	targetFrameHealthBar.DeadText:SetPoint("CENTER", 0, 2);
+	targetFrameHealthBar.UnconsciousText:SetPoint("CENTER", 0, 2);
 
-	-- Fix money display everywhere
-	MONEY_TEXT_VADJUST = 1;
+	local targetFrameManaBar = targetFrameContentMain.ManaBar;
+	targetFrameManaBar.ManaBarText:SetPoint("CENTER", -4, 1);
+	targetFrameManaBar.LeftText:SetPoint("LEFT", 2, 1);
+	targetFrameManaBar.RightText:SetPoint("RIGHT", -13, 1);
+
+	-- Set range indicator for ActionBar. The text on action buttons is switched as needed so changing it here is enough.
+	RANGE_INDICATOR = "•";
 
 	-- Equipment Manager
 	GearManagerPopupFrame.BorderBox.EditBoxHeaderText:SetPoint("TOPLEFT", 24, -18);
+
+	-- Fix money display everywhere
+	MONEY_TEXT_VADJUST = 2;
 
 	-- Combat log config
 	CombatConfigColorsExampleTitle:Hide();
@@ -100,12 +120,15 @@ function LocalizeFrames()
 	CombatConfigFormattingExampleTitle:Hide();
 	CombatConfigFormattingExampleString1:SetPoint("TOPLEFT", 15, -16);
 
-	MIN_CHARACTER_SEARCH = 1;
-
+	-- Friends
+	FRIENDS_BUTTON_NORMAL_HEIGHT = 38;
+	FRIENDS_BUTTON_LARGE_HEIGHT = 52;
 	-- add friend
 	ADDFRIENDFRAME_WOWHEIGHT = 232;
 	ADDFRIENDFRAME_BNETHEIGHT = 310;
 	AddFriendNameEditBox:SetPoint("TOP", 0, -144);
+
+	MIN_CHARACTER_SEARCH = 1;
 
 	--TradeFrame
 	TradeFramePlayerEnchantText:SetPoint("TOPLEFT", TradeFrame, 15, -357);
@@ -121,3 +144,5 @@ function LocalizeFrames()
 	GarrisonShipFollowerAlertSystem:AddLocalizationHook(GarrisonShipFollowerAlertFrame_AdjustTextPositions);
 	GarrisonTalentAlertSystem:AddLocalizationHook(GarrisonTalentAlertFrame_AdjustTextPositions);
 end
+
+
