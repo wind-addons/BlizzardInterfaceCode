@@ -3129,7 +3129,7 @@ StaticPopupDialogs["END_BOUND_TRADEABLE"] = {
 	button1 = OKAY,
 	button2 = CANCEL,
 	OnAccept = function(self)
-		EndBoundTradeable(self.data);
+		C_Item.EndBoundTradeable(self.data);
 	end,
 	timeout = 0,
 	exclusive = 1,
@@ -4423,9 +4423,7 @@ StaticPopupDialogs["REGIONAL_CHAT_DISABLED"] = {
 	button1 = REGIONAL_RESTRICT_CHAT_DIALOG_ENABLE,
 	button2 = REGIONAL_RESTRICT_CHAT_DIALOG_DISABLE,
 	OnAccept = function()
-		local disabled = false;
-		C_SocialRestrictions.SetChatDisabled(disabled);
-		ChatConfigFrame_OnChatDisabledChanged(disabled);
+		Settings.OpenToCategory(Settings.SOCIAL_CATEGORY_ID);
 	end,
 	OnShow = function(self)
 		C_SocialRestrictions.AcknowledgeRegionalChatDisabled();
