@@ -37,7 +37,9 @@ function TutorialLogic:CheckFormSpells()
 		local warningString = nil;
 		local preferredActionBar = nil;
 		for i, spellID in ipairs(formSpells) do
-			if IsSpellKnown(spellID) then
+			local spellBank = Enum.SpellBookSpellBank.Player;
+			local includeOverrides = false;
+			if C_SpellBook.IsSpellInSpellBook(spellID, spellBank, includeOverrides) then
 				TutorialManager:Queue(Class_AddSpellToActionBarService.name, spellID, warningString, NPEV2_SPELLBOOK_TUTORIAL, preferredActionBar, form);
 			end
 		end
@@ -100,7 +102,7 @@ function TutorialLogic:Begin()
 		TutorialManager:AddTutorial(Class_AddHunterTameSpells:new());
 		TutorialManager:AddTutorial(Class_HunterTame:new());
 	end
-	TutorialManager:AddTutorial(Class_EatFood:new());
+	TutorialManager:AddTutorial(Class_SelfHeal:new());
 	TutorialManager:AddTutorial(Class_UseVendor:new());
 	TutorialManager:AddTutorial(Class_PromptLFG:new());
 	TutorialManager:AddTutorial(Class_LookingForGroup:new());
@@ -146,8 +148,6 @@ function TutorialLogic:Begin()
 		end
 	end	
 	TutorialManager:AddWatcher(Class_InventoryWatcher:new(), autoStart);
-	
-	autoStart = false;-- started later after the Player gets food
 	TutorialManager:AddWatcher(Class_LowHealthWatcher:new(), autoStart);
 
 	-- start NPE
@@ -197,7 +197,7 @@ function TutorialLogic:Shutdown()
 	TutorialManager:ShutdownTutorial(Class_HunterStableWatcher.name);
 	TutorialManager:ShutdownTutorial(Class_AddHunterTameSpells.name);
 	TutorialManager:ShutdownTutorial(Class_HunterTame.name);
-	TutorialManager:ShutdownTutorial(Class_EatFood.name);
+	TutorialManager:ShutdownTutorial(Class_SelfHeal.name);
 	TutorialManager:ShutdownTutorial(Class_UseVendor.name);
 	TutorialManager:ShutdownTutorial(Class_PromptLFG.name);
 	TutorialManager:ShutdownTutorial(Class_LookingForGroup.name);

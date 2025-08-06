@@ -164,6 +164,18 @@ function ObjectiveTrackerManager:CanShowPOIs(module)
 	return self.questPOIEnabled;
 end
 
+function ObjectiveTrackerManager:EnumerateActiveBlocksByTag(tag, callback)
+	local ContainerEnumerateActiveModuleBlocksByTag = function(module)
+		if module:MatchesTag(tag) then
+			module:EnumerateActiveBlocks(callback);
+		end
+	end
+
+	for container in pairs(self.containers) do
+		container:ForEachModule(ContainerEnumerateActiveModuleBlocksByTag);
+	end
+end
+
 function ObjectiveTrackerManager:OnPlayerEnteringWorld(isInitialLogin, isReloadingUI)
 	if not isInitialLogin and not isReloadingUI then
 		return;
@@ -185,16 +197,9 @@ function ObjectiveTrackerManager:OnPlayerEnteringWorld(isInitialLogin, isReloadi
 	self:AssignModulesOrder(orderedModules);
 	local mainTrackerFrame = ObjectiveTrackerFrame;
 	self:AddContainer(mainTrackerFrame);
-	self:SetModuleContainer(ScenarioObjectiveTracker, mainTrackerFrame);
-	self:SetModuleContainer(UIWidgetObjectiveTracker, mainTrackerFrame);
-	self:SetModuleContainer(CampaignQuestObjectiveTracker, mainTrackerFrame);
-	self:SetModuleContainer(QuestObjectiveTracker, mainTrackerFrame);
-	self:SetModuleContainer(AdventureObjectiveTracker, mainTrackerFrame);
-	self:SetModuleContainer(AchievementObjectiveTracker, mainTrackerFrame);
-	self:SetModuleContainer(MonthlyActivitiesObjectiveTracker, mainTrackerFrame);
-	self:SetModuleContainer(ProfessionsRecipeTracker, mainTrackerFrame);
-	self:SetModuleContainer(BonusObjectiveTracker, mainTrackerFrame);
-	self:SetModuleContainer(WorldQuestObjectiveTracker, mainTrackerFrame);	
+	for i, module in ipairs(orderedModules) do
+		self:SetModuleContainer(module, mainTrackerFrame);
+	end
 end
 
 EventRegistry:RegisterFrameEventAndCallback("PLAYER_ENTERING_WORLD", ObjectiveTrackerManager.OnPlayerEnteringWorld, ObjectiveTrackerManager);

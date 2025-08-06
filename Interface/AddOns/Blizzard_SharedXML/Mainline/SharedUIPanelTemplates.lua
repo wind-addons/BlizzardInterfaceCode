@@ -273,6 +273,23 @@ function SearchBoxTemplateClearButton_OnClick(self)
 	SearchBoxTemplate_ClearText(self:GetParent());
 end
 
+UIPanelButtonMixin = CreateFromMixins(DisabledTooltipButtonMixin);
+
+function UIPanelButtonMixin:OnEnter()
+	if not self.tooltipDisabled then
+		local defaultTooltipAnchor = "ANCHOR_RIGHT";
+
+		if self.tooltipText then
+			local tooltip = GetAppropriateTooltip();
+			tooltip:SetOwner(self, self.tooltipAnchor or defaultTooltipAnchor);
+			GameTooltip_SetTitle(tooltip, self.tooltipText);
+			tooltip:Show();
+		else
+			DisabledTooltipButtonMixin.OnEnter(self);
+		end
+	end
+end
+
 PanelTabButtonMixin = {};
 
 function PanelTabButtonMixin:OnLoad()
@@ -291,7 +308,7 @@ function PanelTabButtonMixin:OnShow()
 end
 
 function PanelTabButtonMixin:OnEnter()
-	if not IsOnGlueScreen() then
+	if not C_Glue.IsOnGlueScreen() then
 		GameTooltip_Hide();
 	end
 
@@ -302,7 +319,7 @@ function PanelTabButtonMixin:OnEnter()
 end
 
 function PanelTabButtonMixin:OnLeave()
-	if not IsOnGlueScreen() then
+	if not C_Glue.IsOnGlueScreen() then
 		GameTooltip_Hide();
 	end
 end
@@ -840,6 +857,28 @@ function TruncatedTooltipScript_OnLeave(self)
 	end
 end
 
+TruncatedTooltipFontStringMixin = {}
+
+function TruncatedTooltipFontStringMixin:OnEnterInternal(owner)
+	if self:IsTruncated() then
+		local tooltip = GetAppropriateTooltip();
+		tooltip:SetOwner(owner or self, "ANCHOR_RIGHT");
+		tooltip:SetText(self:GetText(), self:GetTextColor());
+		tooltip:Show();
+	end
+end
+
+function TruncatedTooltipFontStringMixin:OnEnter()
+	self:OnEnterInternal();
+end
+
+function TruncatedTooltipFontStringMixin:OnLeave()
+	local tooltip = GetAppropriateTooltip();
+	if tooltip:GetOwner() == self then
+		tooltip:Hide();
+	end
+end
+
 -- Add more methods as needed to pass functionality through to the FontString (like SetText and SetTextColor below)
 TruncatedTooltipFontStringWrapperMixin = {}
 
@@ -853,12 +892,7 @@ function TruncatedTooltipFontStringWrapperMixin:SetTextColor(...)
 end
 
 function TruncatedTooltipFontStringWrapperMixin:OnEnter()
-	if self.Text:IsTruncated() then
-		local tooltip = GetAppropriateTooltip();
-		tooltip:SetOwner(self, "ANCHOR_RIGHT");
-		tooltip:SetText(self.Text:GetText(), self.Text:GetTextColor());
-		tooltip:Show();
-	end
+	TruncatedTooltipFontStringMixin.OnEnterInternal(self.Text, self);
 end
 
 function TruncatedTooltipFontStringWrapperMixin:OnLeave()
@@ -1091,6 +1125,10 @@ function UIButtonMixin:OnEnter()
 
 			if self.tooltipText then
 				local wrap = true;
+				if self.tooltipDisableWrapText then
+					wrap = false;
+				end
+
 				GameTooltip_AddColoredLine(tooltip, self.tooltipText, self.tooltipTextColor or NORMAL_FONT_COLOR, wrap);
 			end
 
@@ -1507,12 +1545,12 @@ function ResizeCheckButtonMixin:SetControlEnabled(enabled)
 	self.Button:SetEnabled(enabled);
 
 	self:UpdateLabelFont();
-	end
+end
 
 function ResizeCheckButtonMixin:IsControlEnabled()
 	if self.Button == nil then
 		return false;
-end
+	end
 
 	return self.Button:IsEnabled();
 end
@@ -1540,20 +1578,6 @@ function ResizeCheckButtonMixin:UpdateLabelFont()
 	local disabledFont = self.disabledLabelFont or "GameFontDisableLarge";
 	local enabled = self:IsControlEnabled();
 	self.Label:SetFontObject(enabled and enabledFont or disabledFont);
-end
-
-function ResizeCheckButtonMixin:OnEnter()
-	if(self.tooltipText ~= nil and not self.tooltipDisabled) then
-		GameTooltip:SetOwner(self, "ANCHOR_RIGHT");
-		GameTooltip_SetTitle(GameTooltip, self.tooltipText);
-		GameTooltip:Show();
-	end
-end
-
-function ResizeCheckButtonMixin:OnLeave()
-	if(self.tooltipText ~= nil and not self.tooltipDisabled) then
-		GameTooltip:Hide();
-	end
 end
 
 SharedEditBoxMixin = {}
@@ -1806,6 +1830,10 @@ function PanelDragBarMixin:OnDragStart()
 		continueDragStart = target.onDragStartCallback(self);
 	end
 
+	if self.onDragStartCallback then
+		continueDragStart = self.onDragStartCallback(self);
+	end
+
 	if continueDragStart then
 		target:StartMoving();
 	end
@@ -1823,6 +1851,10 @@ function PanelDragBarMixin:OnDragStop()
 		continueDragStop = target.onDragStopCallback(self);
 	end
 
+	if self.onDragStopCallback then
+		continueDragStop = self.onDragStopCallback(self);
+	end
+
 	if continueDragStop then
 		target:StopMovingOrSizing();
 	end
@@ -1830,6 +1862,14 @@ function PanelDragBarMixin:OnDragStop()
 	if SetCursor then
 		SetCursor(nil);
 	end
+end
+
+function PanelDragBarMixin:SetOnDragStartCallback(onDragStartCallback)
+	self.onDragStartCallback = onDragStartCallback;
+end
+
+function PanelDragBarMixin:SetOnDragStopCallback(onDragStopCallback)
+	self.onDragStopCallback = onDragStopCallback;
 end
 
 PanelResizeButtonMixin = {};
@@ -1845,16 +1885,26 @@ function PanelResizeButtonMixin:Init(target, minWidth, minHeight, maxWidth, maxH
 	target:SetScript("OnSizeChanged", function(target, width, height)
 		originalTargetOnSizeChanged(target, width, height);
 
+		local newWidth = width;
 		if width < self.minWidth then
-			target:SetWidth(self.minWidth);
+			newWidth = self.minWidth;
+			target:SetWidth(newWidth);
 		elseif self.maxWidth and width > self.maxWidth then
-			target:SetWidth(self.maxWidth);
+			newWidth = self.maxWidth;
+			target:SetWidth(newWidth);
 		end
 
+		local newHeight = height;
 		if height < self.minHeight then
-			target:SetHeight(self.minHeight);
+			newHeight = self.minHeight;
+			target:SetHeight(newHeight);
 		elseif self.maxHeight and height > self.maxHeight then
-			target:SetHeight(self.maxHeight);
+			newHeight = self.maxHeight;
+			target:SetHeight(newHeight);
+		end
+
+		if self.resizeCallback then
+			self.resizeCallback(self, newWidth, newHeight, self.isActive);
 		end
 	end);
 
@@ -1944,6 +1994,10 @@ end
 
 function PanelResizeButtonMixin:SetOnResizeStoppedCallback(resizeStoppedCallback)
 	self.resizeStoppedCallback = resizeStoppedCallback;
+end
+
+function PanelResizeButtonMixin:SetOnResizeCallback(resizeCallback)
+	self.resizeCallback = resizeCallback;
 end
 
 AlphaHighlightButtonMixin = {};
@@ -2729,13 +2783,6 @@ function RingedMaskedButtonMixin:OnMouseDown(button)
 end
 
 function RingedMaskedButtonMixin:OnMouseUp(button)
-	if button == "RightButton" and self.expandedTooltipFrame then
-		self.tooltipsExpanded = not self.tooltipsExpanded;
-		if self:IsMouseMotionFocus() then
-			self:OnEnter();
-		end
-	end
-
 	self.CheckedTexture:SetPoint("CENTER");
 	self.CircleMask:SetPoint("TOPLEFT", self.NormalTexture, "TOPLEFT", self.circleMaskSizeOffset, -self.circleMaskSizeOffset);
 	self.CircleMask:SetPoint("BOTTOMRIGHT", self.NormalTexture, "BOTTOMRIGHT", -self.circleMaskSizeOffset, self.circleMaskSizeOffset);
@@ -2872,15 +2919,16 @@ function ExpandBarMixin:OnLeave()
 end
 
 function ExpandBarMixin:OnClick()
-	PlaySound(self.ExpandButton:GetOnClickSoundKit());
+	if not self:IsLocked() then
+		PlaySound(self.ExpandButton:GetOnClickSoundKit());
 
-	local isUserInput = true;
-	self:Toggle(isUserInput);
+		local isUserInput = true;
+		self:Toggle(isUserInput);
+	end
 end
 
 function ExpandBarMixin:Toggle(isUserInput)
 	local shouldBeShown = not self.target:IsShown();
-	self.target:SetShown(shouldBeShown);
 	self:SetExpandedState(shouldBeShown);
 
 	if self.onToggleCallback then
@@ -2900,8 +2948,18 @@ function ExpandBarMixin:IsExpanded()
 	return self.target:IsShown();
 end
 
-function ExpandBarMixin:SetExpandedState(expanded)
+function ExpandBarMixin:SetExpandedState(expanded, locked)
 	self.ExpandButton:SetExpandedState(expanded);
+	self.target:SetShown(expanded);
+
+	if locked ~= nil then
+		self.ExpandButton:SetShown(not locked);
+		self.locked = locked;
+	end
+end
+
+function ExpandBarMixin:IsLocked()
+	return self.locked;
 end
 
 function ExpandBarMixin:UpdateExpandedState()
@@ -2979,22 +3037,12 @@ function LevelRangeFrameMixin:GetLevelRange()
 	return self.MinLevel:GetNumber(), self.MaxLevel:GetNumber();
 end
 
-function Main_HelpPlate_Button_OnEnter(self)
-	Main_HelpPlate_Button_ShowTooltip(self);
-	HelpPlateTooltip.LingerAndFade:Stop();
+UIPanelIconDropdownButtonMixin = { };
+
+function UIPanelIconDropdownButtonMixin:OnMouseDown()
+	self.Icon:AdjustPointsOffset(1, -1);
 end
 
-function Main_HelpPlate_Button_ShowTooltip(self)
-	HelpPlateTooltip.ArrowRIGHT:Show();
-	HelpPlateTooltip.ArrowGlowRIGHT:Show();
-	HelpPlateTooltip:SetPoint("LEFT", self, "RIGHT", 10, 0);
-	HelpPlateTooltip.Text:SetText(self.MainHelpPlateButtonTooltipText or MAIN_HELP_BUTTON_TOOLTIP);
-	HelpPlateTooltip:Show();
-end
-
-function Main_HelpPlate_Button_OnLeave(self)
-	HelpPlateTooltip.ArrowRIGHT:Hide();
-	HelpPlateTooltip.ArrowGlowRIGHT:Hide();
-	HelpPlateTooltip:ClearAllPoints();
-	HelpPlateTooltip:Hide();
+function UIPanelIconDropdownButtonMixin:OnMouseUp(button, upInside)
+	self.Icon:AdjustPointsOffset(-1, 1);
 end

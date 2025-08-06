@@ -61,6 +61,7 @@ local SimpleRegionAPI =
 		{
 			Name = "GetVertexColor",
 			Type = "Function",
+			MayReturnNothing = true,
 
 			Arguments =
 			{
@@ -144,6 +145,7 @@ local SimpleRegionAPI =
 		{
 			Name = "SetIgnoreParentScale",
 			Type = "Function",
+			IsProtectedFunction = true,
 
 			Arguments =
 			{
@@ -153,6 +155,7 @@ local SimpleRegionAPI =
 		{
 			Name = "SetScale",
 			Type = "Function",
+			IsProtectedFunction = true,
 
 			Arguments =
 			{

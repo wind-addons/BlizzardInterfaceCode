@@ -158,6 +158,7 @@ local GarrisonInfo =
 		{
 			Name = "GetFollowerAutoCombatSpells",
 			Type = "Function",
+			MayReturnNothing = true,
 
 			Arguments =
 			{
@@ -323,6 +324,7 @@ local GarrisonInfo =
 		{
 			Name = "GetTalentTreeIDsByClassID",
 			Type = "Function",
+			MayReturnNothing = true,
 
 			Arguments =
 			{
@@ -374,7 +376,7 @@ local GarrisonInfo =
 				{ Name = "researchRank", Type = "number", Nilable = false },
 				{ Name = "garrTalentTreeID", Type = "number", Nilable = false },
 				{ Name = "talentPointIndex", Type = "number", Nilable = false },
-				{ Name = "isRespec", Type = "number", Nilable = false },
+				{ Name = "isRespec", Type = "bool", Nilable = false },
 			},
 
 			Returns =
@@ -387,6 +389,7 @@ local GarrisonInfo =
 		{
 			Name = "GetTalentUnlockWorldQuest",
 			Type = "Function",
+			MayReturnNothing = true,
 
 			Arguments =
 			{
@@ -442,6 +445,20 @@ local GarrisonInfo =
 			Returns =
 			{
 				{ Name = "followerOnCompletedMission", Type = "bool", Nilable = false },
+			},
+		},
+		{
+			Name = "IsLandingPageMinimapButtonVisible",
+			Type = "Function",
+
+			Arguments =
+			{
+				{ Name = "garrType", Type = "number", Nilable = false },
+			},
+
+			Returns =
+			{
+				{ Name = "isLandingPageMinimapButtonVisible", Type = "bool", Nilable = false },
 			},
 		},
 		{

@@ -5,6 +5,7 @@ ScrollBoxListViewMixin = CreateFromMixins(ScrollBoxViewMixin, CallbackRegistryMi
 ScrollBoxListViewMixin:GenerateCallbackEvents(
 	{
 		"OnDataChanged",
+		"OnDataProviderReassigned",
 		"OnAcquiredFrame",
 		"OnInitializedFrame",
 		"OnReleasedFrame",
@@ -294,6 +295,7 @@ function ScrollBoxListViewMixin:SetDataProvider(dataProvider, retainScrollPositi
 		dataProvider:RegisterCallback(DataProviderMixin.Event.OnSort, self.OnDataProviderSort, self);
 	end
 	
+	self:TriggerEvent(ScrollBoxListViewMixin.Event.OnDataProviderReassigned);
 	self:SignalDataChangeEvent(InvalidationReason.DataProviderReassigned);
 end
 
@@ -571,8 +573,13 @@ function ScrollBoxListViewMixin:GetPanExtent(spacing)
 	if not self.panExtent then
 		return 0;
 	end
+	
+	local panExtent = self.panExtent + spacing;
+	if self.maxPanExtent and (panExtent > self.maxPanExtent) then
+		return self.maxPanExtent;
+	end
 
-	return self.panExtent + spacing;
+	return panExtent;
 end
 
 function ScrollBoxListViewMixin:IsVirtualized()

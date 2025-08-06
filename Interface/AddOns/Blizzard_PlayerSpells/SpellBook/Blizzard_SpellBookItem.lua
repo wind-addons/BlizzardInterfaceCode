@@ -157,12 +157,8 @@ function SpellBookItemMixin:ToggleFlyout(reason)
 	end
 
 	local offSpecID = self.isOffSpec and self.elementData.specID or nil;
-	local distance, isActionBar, showFullTooltip = -2, false, true;
-	SpellFlyout:Toggle(self.spellBookItemInfo.actionID, self.Button, "RIGHT", distance, isActionBar, offSpecID, showFullTooltip, reason);
-	SpellFlyout:SetBorderSize(42);
-
-	local rotation = SpellFlyout:IsShown() and 180 or 0;
-	SetClampedTextureRotation(self.Button.FlyoutArrow, rotation);
+	local isActionBar, showFullTooltip = false, true;
+	SpellFlyout:Toggle(self.Button, self.spellBookItemInfo.actionID, isActionBar, offSpecID, showFullTooltip, reason);
 end
 
 local function TrimTextSpace(textFrame)
@@ -206,9 +202,9 @@ function SpellBookItemMixin:UpdateVisuals()
 	end
 
 	if (self.spellBookItemInfo.itemType == Enum.SpellBookItemType.Flyout) then
-		self.Button.FlyoutArrow:Show();
+		self.Button:SetPopup(SpellFlyout);
 	else
-		self.Button.FlyoutArrow:Hide();
+		self.Button:ClearPopup();
 	end
 
 	self:UpdateArtSet();
@@ -224,7 +220,7 @@ function SpellBookItemMixin:UpdateVisuals()
 	self.isUnlearned = self.isOffSpec or self.spellBookItemInfo.itemType == Enum.SpellBookItemType.FutureSpell;
 
 	self.Button.Icon:SetDesaturated(self.isUnlearned);
-	self.Button.FlyoutArrow:SetDesaturated(self.isUnlearned);
+	self.Button.Arrow:SetDesaturated(self.isUnlearned);
 
 	self.isTrainable = false;
 
@@ -300,6 +296,7 @@ function SpellBookItemMixin:UpdateVisuals()
 	self:UpdateClickBindState();
 	self:UpdateBorderAnim();
 	self:UpdateTrainableFX();
+	self:UpdateAssistedCombatState();
 
 	-- If already being hovered, make sure to reset any on-hover state that needs to change
 	if self.Button:IsMouseMotionFocus() then
@@ -368,6 +365,12 @@ function SpellBookItemMixin:UpdateTrainableFX()
 		self.trainableFXController:CancelEffect();
 		self.trainableFXController = nil;
 	end
+end
+
+function SpellBookItemMixin:UpdateAssistedCombatState()
+	local spellID = self.spellBookItemInfo.spellID;
+	local show = not self.spellBookItemInfo.isOffSpec and AssistedCombatManager:ShouldHighlightSpellbookSpell(spellID);
+	self.Button.AssistedCombatIconCover:SetShown(show);
 end
 
 function SpellBookItemMixin:UpdateCooldown()
@@ -506,6 +509,11 @@ function SpellBookItemMixin:OnIconEnter()
 	local actionBarStatusToolTip = self.actionBarStatus and SpellSearchUtil.GetTooltipForActionBarStatus(self.actionBarStatus);
 	if actionBarStatusToolTip then
 		GameTooltip_AddColoredLine(tooltip, actionBarStatusToolTip, LIGHTBLUE_FONT_COLOR);
+	end
+
+	local spellID = self.spellBookItemInfo.spellID;
+	if not self.spellBookItemInfo.isOffSpec then
+		AssistedCombatManager:AddSpellTooltipLine(tooltip, spellID);
 	end
 
 	tooltip:Show();
@@ -717,6 +725,7 @@ end
 SpellBookItemButtonMixin = {};
 
 function SpellBookItemButtonMixin:OnLoad()
+	FlyoutButtonMixin.OnLoad(self);
 	self:RegisterForDrag("LeftButton");
 	self:RegisterForClicks("LeftButtonUp", "RightButtonUp");
 end
@@ -730,21 +739,26 @@ function SpellBookItemButtonMixin:OnClick(button)
 end
 
 function SpellBookItemButtonMixin:OnEnter()
+	FlyoutButtonMixin.OnEnter(self);
 	self:GetParent():OnIconEnter();
 end
 
 function SpellBookItemButtonMixin:OnLeave()
+	FlyoutButtonMixin.OnLeave(self);
 	self:GetParent():OnIconLeave();
 end
 
 function SpellBookItemButtonMixin:OnDragStart()
+	FlyoutButtonMixin.OnDragStart(self);
 	self:GetParent():OnIconDragStart();
 end
 
 function SpellBookItemButtonMixin:OnMouseDown()
+	FlyoutButtonMixin.OnMouseDown(self);
 	self:GetParent():OnIconMouseDown();
 end
 
 function SpellBookItemButtonMixin:OnMouseUp()
+	FlyoutButtonMixin.OnMouseUp(self);
 	self:GetParent():OnIconMouseUp();
 end

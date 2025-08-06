@@ -117,10 +117,6 @@ function TargetFrameMixin:OnLoad(unit, menuFunc)
 	SecureUnitButton_OnLoad(self, self.unit, menuFunc);
 end
 
-local function ShouldShowTargetFrame(targetFrame)
-	return UnitExists(targetFrame.unit) or ShowBossFrameWhenUninteractable(targetFrame.unit);
-end
-
 function TargetFrameMixin:Update()
 	-- This check is here so the frame will hide when the target goes away
 	-- even if some of the functions below are hooked by addons.
@@ -184,7 +180,7 @@ function TargetFrameMixin:OnEvent(event, ...)
 			bossTargetFrame:UpdateRaidTargetIcon(bossTargetFrame);
 		end
 		UIParent_ManageFramePositions();
-		BossTargetFrameContainer:Show();
+		BossTargetFrameContainer:UpdateShownState();
 	elseif (event == "UNIT_TARGETABLE_CHANGED" and arg1 == self.unit) then
 		self:Update();
 		self:UpdateRaidTargetIcon(self);
@@ -1296,12 +1292,16 @@ function BossTargetFrameMixin:OnShow()
 	BossTargetFrameContainer:UpdateSize();
 end
 
-function BossTargetFrameMixin:OnHide()
+function BossTargetFrameMixin:BossTarget_OnHide()
 	BossTargetFrameContainer:UpdateSize();
 end
 
+function BossTargetFrameMixin:ShouldShow()
+	return BossTargetFrameContainer.isInEditMode or ShouldShowTargetFrame(self);
+end
+
 function BossTargetFrameMixin:UpdateShownState()
-	self:SetShown(BossTargetFrameContainer.isInEditMode or ShouldShowTargetFrame(self));
+	self:SetShown(self:ShouldShow());
 	self.spellbar:SetShown(BossTargetFrameContainer.isInEditMode or self.spellbar.casting);
 end
 
@@ -1323,6 +1323,15 @@ function BossTargetFrame_OpenMenu(self)
 end
 
 BossTargetFrameContainerMixin = { };
+
+function BossTargetFrameContainerMixin:OnLoad()
+	EditModeSystemMixin.OnSystemLoad(self);
+	self:RegisterEvent("PLAYER_ENTERING_WORLD");
+end
+
+function BossTargetFrameContainerMixin:OnEvent(event, ...)
+	self:UpdateShownState();
+end
 
 function BossTargetFrameContainerMixin:UpdateSize()
 	local lastShowingBossFrame;

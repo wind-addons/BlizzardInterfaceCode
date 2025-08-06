@@ -22,6 +22,15 @@ local CurrencyInfo =
 			},
 		},
 		{
+			Name = "DoesCurrentFilterRequireAccountCurrencyData",
+			Type = "Function",
+
+			Returns =
+			{
+				{ Name = "doesCurrentFilterRequireAccountCurrencyData", Type = "bool", Nilable = false },
+			},
+		},
+		{
 			Name = "DoesWarModeBonusApply",
 			Type = "Function",
 
@@ -49,6 +58,7 @@ local CurrencyInfo =
 		{
 			Name = "FetchCurrencyDataFromAccountCharacters",
 			Type = "Function",
+			MayReturnNothing = true,
 
 			Arguments =
 			{
@@ -81,6 +91,7 @@ local CurrencyInfo =
 		{
 			Name = "GetBackpackCurrencyInfo",
 			Type = "Function",
+			MayReturnNothing = true,
 
 			Arguments =
 			{
@@ -95,6 +106,7 @@ local CurrencyInfo =
 		{
 			Name = "GetBasicCurrencyInfo",
 			Type = "Function",
+			MayReturnNothing = true,
 
 			Arguments =
 			{
@@ -169,6 +181,7 @@ local CurrencyInfo =
 		{
 			Name = "GetCurrencyContainerInfo",
 			Type = "Function",
+			MayReturnNothing = true,
 
 			Arguments =
 			{
@@ -196,6 +209,15 @@ local CurrencyInfo =
 			},
 		},
 		{
+			Name = "GetCurrencyFilter",
+			Type = "Function",
+
+			Returns =
+			{
+				{ Name = "filterType", Type = "CurrencyFilterType", Nilable = false },
+			},
+		},
+		{
 			Name = "GetCurrencyIDFromLink",
 			Type = "Function",
 
@@ -212,6 +234,7 @@ local CurrencyInfo =
 		{
 			Name = "GetCurrencyInfo",
 			Type = "Function",
+			MayReturnNothing = true,
 
 			Arguments =
 			{
@@ -226,6 +249,7 @@ local CurrencyInfo =
 		{
 			Name = "GetCurrencyInfoFromLink",
 			Type = "Function",
+			MayReturnNothing = true,
 
 			Arguments =
 			{
@@ -255,6 +279,7 @@ local CurrencyInfo =
 		{
 			Name = "GetCurrencyListInfo",
 			Type = "Function",
+			MayReturnNothing = true,
 
 			Arguments =
 			{
@@ -390,6 +415,15 @@ local CurrencyInfo =
 			},
 		},
 		{
+			Name = "IsCurrencyTransferInProgress",
+			Type = "Function",
+
+			Returns =
+			{
+				{ Name = "currencyTransferInProgress", Type = "bool", Nilable = false },
+			},
+		},
+		{
 			Name = "IsCurrencyTransferTransactionDataReady",
 			Type = "Function",
 
@@ -442,6 +476,7 @@ local CurrencyInfo =
 		{
 			Name = "RequestCurrencyFromAccountCharacter",
 			Type = "Function",
+			HasRestrictions = true,
 
 			Arguments =
 			{
@@ -458,6 +493,26 @@ local CurrencyInfo =
 			{
 				{ Name = "index", Type = "luaIndex", Nilable = false },
 				{ Name = "backpack", Type = "bool", Nilable = false },
+			},
+		},
+		{
+			Name = "SetCurrencyBackpackByID",
+			Type = "Function",
+
+			Arguments =
+			{
+				{ Name = "currencyType", Type = "number", Nilable = false },
+				{ Name = "backpack", Type = "bool", Nilable = false },
+			},
+		},
+		{
+			Name = "SetCurrencyFilter",
+			Type = "Function",
+			HasRestrictions = true,
+
+			Arguments =
+			{
+				{ Name = "filterType", Type = "CurrencyFilterType", Nilable = false },
 			},
 		},
 		{
@@ -501,11 +556,25 @@ local CurrencyInfo =
 			Name = "CurrencyTransferFailed",
 			Type = "Event",
 			LiteralName = "CURRENCY_TRANSFER_FAILED",
+			Payload =
+			{
+				{ Name = "failureReason", Type = "AccountCurrencyTransferResult", Nilable = false },
+			},
+		},
+		{
+			Name = "CurrencyTransferInitiated",
+			Type = "Event",
+			LiteralName = "CURRENCY_TRANSFER_INITIATED",
 		},
 		{
 			Name = "CurrencyTransferLogUpdate",
 			Type = "Event",
 			LiteralName = "CURRENCY_TRANSFER_LOG_UPDATE",
+		},
+		{
+			Name = "CurrencyTransferSuccess",
+			Type = "Event",
+			LiteralName = "CURRENCY_TRANSFER_SUCCESS",
 		},
 		{
 			Name = "PlayerMoney",

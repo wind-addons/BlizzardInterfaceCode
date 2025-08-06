@@ -57,7 +57,6 @@ LOCALIZED_CLASS_NAMES_FEMALE = LocalizedClassList(true);
 --
 -- Spell
 --
-HUNTER_DISMISS_PET = 2641;
 WARLOCK_METAMORPHOSIS = 103958;
 WARLOCK_SOULBURN = 117198;
 WARLOCK_GREEN_FIRE = 101508;
@@ -136,38 +135,7 @@ NUM_EVALUATION_TREE_FLAGS				= 2;
 ITEM_UNIQUE_EQUIPPED = -1;
 MAX_NUM_SOCKETS = 3;
 
-BAG_ITEM_QUALITY_COLORS = {
-	[Enum.ItemQuality.Common] = COMMON_GRAY_COLOR,
-	[Enum.ItemQuality.Uncommon] = UNCOMMON_GREEN_COLOR,
-	[Enum.ItemQuality.Rare] = RARE_BLUE_COLOR,
-	[Enum.ItemQuality.Epic] = EPIC_PURPLE_COLOR,
-	[Enum.ItemQuality.Legendary] = LEGENDARY_ORANGE_COLOR,
-	[Enum.ItemQuality.Artifact] = ARTIFACT_GOLD_COLOR,
-	[Enum.ItemQuality.Heirloom] = HEIRLOOM_BLUE_COLOR,
-	[Enum.ItemQuality.WoWToken] = HEIRLOOM_BLUE_COLOR,
-}
-
-NEW_ITEM_ATLAS_BY_QUALITY = {
-	[Enum.ItemQuality.Poor] = "bags-glow-white",
-	[Enum.ItemQuality.Common] = "bags-glow-white",
-	[Enum.ItemQuality.Uncommon] = "bags-glow-green",
-	[Enum.ItemQuality.Rare] = "bags-glow-blue",
-	[Enum.ItemQuality.Epic] = "bags-glow-purple",
-	[Enum.ItemQuality.Legendary] = "bags-glow-orange",
-	[Enum.ItemQuality.Artifact] = "bags-glow-artifact",
-	[Enum.ItemQuality.Heirloom] = "bags-glow-heirloom",
-};
-
 -- Loot
-LOOT_BORDER_BY_QUALITY = {
-	[Enum.ItemQuality.Uncommon] = "loottoast-itemborder-green",
-	[Enum.ItemQuality.Rare] = "loottoast-itemborder-blue",
-	[Enum.ItemQuality.Epic] = "loottoast-itemborder-purple",
-	[Enum.ItemQuality.Legendary] = "loottoast-itemborder-orange",
-	[Enum.ItemQuality.Heirloom] = "loottoast-itemborder-heirloom",
-	[Enum.ItemQuality.Artifact] = "loottoast-itemborder-artifact",
-};
-
 LOOT_ROLL_TYPE_PASS = 0;
 LOOT_ROLL_TYPE_NEED = 1;
 LOOT_ROLL_TYPE_GREED = 2;
@@ -177,7 +145,6 @@ LOOT_ROLL_TYPE_DISENCHANT = 3;
 ITEM_INVENTORY_LOCATION_PLAYER		= 0x00100000;
 ITEM_INVENTORY_LOCATION_BAGS		= 0x00200000;
 ITEM_INVENTORY_LOCATION_BANK		= 0x00400000;
-ITEM_INVENTORY_LOCATION_VOIDSTORAGE	= 0x00800000;
 ITEM_INVENTORY_BAG_BIT_OFFSET 		= 8; -- Number of bits that the bag index in GetInventoryItemsForSlot gets shifted to the left.
 
 -- Inventory slots
@@ -212,15 +179,10 @@ INVSLOTS_EQUIPABLE_IN_COMBAT = {
 
 -- Container constants
 BACKPACK_CONTAINER = Enum.BagIndex.Backpack;
-BANK_CONTAINER = Enum.BagIndex.Bank;
-BANK_CONTAINER_INVENTORY_OFFSET = 39; -- Used for PickupInventoryItem
-REAGENTBANK_CONTAINER = Enum.BagIndex.Reagentbank;
 
 NUM_BAG_SLOTS = Constants.InventoryConstants.NumBagSlots;
 NUM_REAGENTBAG_SLOTS = Constants.InventoryConstants.NumReagentBagSlots;
 NUM_TOTAL_EQUIPPED_BAG_SLOTS = NUM_BAG_SLOTS + NUM_REAGENTBAG_SLOTS;
-NUM_BANKGENERIC_SLOTS = Constants.InventoryConstants.NumGenericBankSlots;
-NUM_BANKBAGSLOTS = Constants.InventoryConstants.NumBankBagSlots;
 
 ITEM_INVENTORY_BANK_BAG_OFFSET = NUM_TOTAL_EQUIPPED_BAG_SLOTS; -- Number of bags before the first bank bag
 CONTAINER_BAG_OFFSET = 30; -- Used for PutItemInBag
@@ -239,6 +201,8 @@ EQUIPMENT_SET_ITEM_MISSING = -1;
 --
 -- Combat Log
 --
+
+COMBATLOG_OBJECT_EMPTY					= 0x00000000;
 
 -- Affiliation
 COMBATLOG_OBJECT_AFFILIATION_MINE		= 0x00000001;
@@ -673,6 +637,17 @@ CONQUEST_SIZE_STRINGS = { RATED_SOLO_SHUFFLE_SIZE, RATED_BG_BLITZ_SIZE, ARENA_2V
 CONQUEST_TYPE_STRINGS = { ARENA, BATTLEGROUNDS, ARENA, ARENA, BATTLEGROUNDS };
 CONQUEST_SIZES = { 1, 1, 2, 3, 10 };
 CONQUEST_BRACKET_INDEXES = { 7, 9, 1, 2, 4 }; -- 5v5 was removed
+CONQUEST_BRACKET_NAMES = {
+	[1] = CONQUEST_BRACKET_NAME_2V2,
+	[2] = CONQUEST_BRACKET_NAME_3V3,
+	-- [3] = 5v5 (Deprecated)
+	[4] = CONQUEST_BRACKET_NAME_RBG,
+	-- [5] = Arena Skirmish (Not rated)
+	-- [6] = Brawl Solo Shuffle (Not rated)
+	[7] = CONQUEST_BRACKET_NAME_SOLO_SHUFFLE,
+	-- [8] = Brawl Battleground Blitz (Not rated)
+	[9] = CONQUEST_BRACKET_NAME_BATTLEGROUND_BLITZ,
+};
 
 -- Chat
 CHANNEL_INVITE_TIMEOUT = 60;
@@ -682,9 +657,6 @@ SCENARIO_FLAG_DEPRECATED1			= 0x00000001;
 SCENARIO_FLAG_SUPRESS_STAGE_TEXT	= 0x00000002;
 SCENARIO_FLAG_DEPRECATED2			= 0x00000004;
 SCENARIO_FLAG_DEPRECATED3			= 0x00000008;
-
--- Lua Warning types
-LUA_WARNING_TREAT_AS_ERROR = 0;
 
 -- Quest Tags
 QUEST_TAG_ATLAS = {
@@ -696,8 +668,8 @@ QUEST_TAG_ATLAS = {
 	["STORY"] = "questlog-questtypeicon-story",
 	["ALLIANCE"] = "questlog-questtypeicon-alliance",
 	["HORDE"] = "questlog-questtypeicon-horde",
-	["EXPIRING_SOON"] = "questlog-questtypeicon-expiringsoon",
-	["EXPIRING"] = "questlog-questtypeicon-expiring",
+	["EXPIRING_SOON"] = "questlog-questtypeicon-clockorange",
+	["EXPIRING"] = "questlog-questtypeicon-clockyellow",
 	[Enum.QuestTag.Dungeon] = "questlog-questtypeicon-dungeon",
 	[Enum.QuestTag.Scenario] = "questlog-questtypeicon-scenario",
 	[Enum.QuestTag.Group] = "questlog-questtypeicon-group",
@@ -806,14 +778,5 @@ RELIC_TALENT_LINK_STYLE_POTENTIAL = 2;
 RELIC_TALENT_LINK_STYLE_ACTIVE = 3;
 RELIC_TALENT_LINK_STYLE_UPCOMING = 4;
 RELIC_TALENT_LINK_STYLE_AVAILABLE = 5;
-
--- TODO: Need to be able to expose this from client...
-Enum.ChatChannelType = {
-	None = 0,
-	Custom = 1,
-	Private_Party = 2,
-	Public_Party = 3,
-	Communities = 4,
-};
 
 TOOLTIP_INDENT_OFFSET = 10;

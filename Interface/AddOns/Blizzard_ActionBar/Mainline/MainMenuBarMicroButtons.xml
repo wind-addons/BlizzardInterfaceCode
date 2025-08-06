@@ -1,5 +1,18 @@
 <Ui xmlns="http://www.blizzard.com/wow/ui/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.blizzard.com/wow/ui/
 ..\..\Blizzard_SharedXML\UI.xsd">
+	<Frame name="MainMenuBarMicroButtonNotificationTemplate" frameLevel="100" setAllPoints="true" hidden="true" virtual="true">
+		<Layers>
+			<Layer level="OVERLAY">
+				<Texture atlas="UI-HUD-MicroMenu-Communities-Icon-Notification">
+					<Size x="21" y="21"/>
+					<Anchors>
+						<Anchor point="TOP" relativeKey="$parent" relativePoint="TOP" y="6"/>
+					</Anchors>
+				</Texture>
+			</Layer>
+		</Layers>
+	</Frame>
+	
 	<Frame name="MicroButtonAndBagsBar" parent="UIParent">
 		<Size x="232" y="80"/>
 		<Anchors>
@@ -33,15 +46,8 @@
 			<OnHide method="OnHide" inherit="append"/>
 			<OnMouseDown method="OnMouseDown" inherit="append"/>
 			<OnMouseUp method="OnMouseUp"/>
-			<OnEnable>
-				self:SetAlpha(1);
-			</OnEnable>
-			<OnDisable>
-				self:SetAlpha(0.5);
-			</OnDisable>
-			<OnLeave inherit="append">
-				GameTooltip:Hide();
-			</OnLeave>
+			<OnEnable method="OnEnable"/>
+			<OnDisable method="OnDisable"/>
 		</Scripts>
 	</Button>
 
@@ -58,7 +64,7 @@
 		</KeyValues>
 		<Layers>
 			<Layer level="BORDER">
-				<Texture parentKey="Shadow" atlas="UI-HUD-MicroMenu-Portrait-Shadow-2x" useAtlasSize="true">
+				<Texture parentKey="Shadow" atlas="UI-HUD-MicroMenu-Portrait-Shadow" useAtlasSize="true">
 					<Anchors>
 						<Anchor point="CENTER"/>
 					</Anchors>
@@ -83,7 +89,7 @@
 						<MaskedTexture childKey="Portrait"/>
 					</MaskedTextures>
 				</MaskTexture>
-				<Texture parentKey="PushedShadow" atlas="UI-HUD-MicroMenu-Portrait-Down-2x" useAtlasSize="true" hidden="true">
+				<Texture parentKey="PushedShadow" atlas="UI-HUD-MicroMenu-Portrait-Down" useAtlasSize="true" hidden="true">
 					<Anchors>
 						<Anchor point="CENTER" x="1" y="-4"/>
 					</Anchors>
@@ -188,18 +194,7 @@
 			</Layer>
 		</Layers>
 		<Frames>
-			<Frame parentKey="NotificationOverlay" frameLevel="100" setAllPoints="true" hidden="true">
-				<Layers>
-					<Layer level="OVERLAY">
-						<Texture parentKey="UnreadNotificationIcon" atlas="UI-HUD-MicroMenu-Communities-Icon-Notification">
-							<Size x="10" y="10"/>
-							<Anchors>
-								<Anchor point="TOP" relativeKey="$parent" relativePoint="TOP" x="-1" y="1"/>
-							</Anchors>
-						</Texture>
-					</Layer>
-				</Layers>
-			</Frame>
+			<Frame parentKey="NotificationOverlay" inherits="MainMenuBarMicroButtonNotificationTemplate"/>
 		</Frames>
 		<Scripts>
 			<OnLoad method="OnLoad"/>
@@ -285,11 +280,14 @@
 				<Texture parentKey="FlashContent" atlas="UI-HUD-MicroMenu-Shop-Mouseover" useAtlasSize="true" alphaMode="BLEND" hidden="true"/>
 			</Layer>
 		</Layers>
+		<KeyValues>
+			<KeyValue key="buttonContext" value="StoreMicroButton" type="string"/>
+		</KeyValues>
 		<Scripts>
 			<OnLoad method="OnLoad"/>
 			<OnShow function="MicroButton_KioskModeDisable" inherit="append"/>
 			<OnEvent method="OnEvent"/>
-			<OnClick function="ToggleStoreUI"/>
+			<OnClick method="OnClick"/>
 		</Scripts>
 	</Button>
 
@@ -309,6 +307,9 @@
 				</Texture>
 			</Layer>
 		</Layers>
+		<Frames>
+			<Frame parentKey="NotificationOverlay" inherits="MainMenuBarMicroButtonNotificationTemplate"/>
+		</Frames>
 		<Scripts>
 			<OnLoad method="OnLoad"/>
 			<OnUpdate method="OnUpdate"/>

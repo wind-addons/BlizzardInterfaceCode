@@ -39,7 +39,7 @@
 				end
 				local unit = self:GetParent().unit;
 				local filter;
-				if ( SHOW_DISPELLABLE_DEBUFFS == "1" and UnitCanAssist("player", unit) ) then
+				if ( GetCVarBool("showDispelDebuffs") and UnitCanAssist("player", unit) ) then
 					filter = "RAID";
 				end
 				GameTooltip:SetUnitDebuff(unit, self:GetID(), filter);
@@ -279,6 +279,10 @@
 						</Texture>
 					</Layer>
 					<Layer level="ARTWORK" textureSubLevel="1">
+						<Texture parentKey="overAbsorbGlow" inherits="OverAbsorbGlowTemplate" hidden="1"/>
+						<Texture parentKey="overHealAbsorbGlow" inherits="OverHealAbsorbGlowTemplate" hidden="1"/>
+					</Layer>
+					<Layer level="ARTWORK" textureSubLevel="1">
 						<Texture name="$parentPrestigeBadge" hidden="true">
 							<Size x="30" y="30"/>
 							<Anchors>
@@ -296,6 +300,8 @@
 				<Frames>
 					<Frame parentKey="MyHealPredictionBar" inherits="TargetFrameBarSegmentTemplate, MyHealPredictionBarTemplate"/>
 					<Frame parentKey="OtherHealPredictionBar" inherits="TargetFrameBarSegmentTemplate, OtherHealPredictionBarTemplate"/>
+					<Frame parentKey="HealAbsorbBar" inherits="PlayerFrameBarSegmentTemplate, HealAbsorbBarTemplate"/>
+					<Frame parentKey="TotalAbsorbBar" inherits="PlayerFrameBarSegmentTemplate, TotalAbsorbBarTemplate"/>
 				</Frames>
 				<Scripts>
 					<OnLoad>
@@ -543,7 +549,7 @@
 				self.showClassification = true;
 				self.showAuraCount = true;
 				self:SetHitRectInsets(96, 40, 10, 9);		-- allows mouseover over health and mana bars
-				TargetFrame_OnLoad(self, "target", TargetFrameDropdown_Initialize);
+				TargetFrame_OnLoad(self, "target", TargetFrame_OpenMenu);
 				TargetFrame_CreateSpellbar(self, "PLAYER_TARGET_CHANGED");
 				TargetFrame_CreateTargetofTarget(self, "targettarget");
 				self:RegisterEvent("PLAYER_TARGET_CHANGED");
@@ -581,7 +587,7 @@
 				self.showPortrait = true;
 				self.showClassification = true;
 				self.showAuraCount = true;
-				TargetFrame_OnLoad(self, "focus", FocusFrameDropdown_Initialize);
+				TargetFrame_OnLoad(self, "focus", FocusFrame_OpenMenu);
 				TargetFrame_CreateSpellbar(self, "PLAYER_FOCUS_CHANGED");
 				TargetFrame_CreateTargetofTarget(self, "focustarget");
 				self:RegisterEvent("PLAYER_FOCUS_CHANGED");

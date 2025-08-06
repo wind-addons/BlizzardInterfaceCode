@@ -22,6 +22,10 @@ function SetCVarBitfield(name, index, value, scriptCVar)
 	return C_CVar.SetCVarBitfield(name, index, value, scriptCVar);
 end
 
+function SetCVarToDefault(name)
+	SetCVar(name, GetCVarDefault(name))
+end
+
 function GetCVarBitfield(name, index)
 	return C_CVar.GetCVarBitfield(name, index);
 end
@@ -118,26 +122,27 @@ end
 
 function CVarCallbackRegistry:GetCVarValue(cvar)
 	local value = self.cvarValueCache[cvar];
-	if value then
-		return value;
+	if value == nil then
+		value = GetCVar(cvar);
+
+		if self.cachable[cvar] then
+			self.cvarValueCache[cvar] = value;
+		end
 	end
-
-	value = GetCVar(cvar);
-
-	if self.cachable[cvar] then
-		self.cvarValueCache[cvar] = value;
-	end
-
 	return value;
 end
 
 function CVarCallbackRegistry:GetCVarValueBool(cvar)
 	local value = self:GetCVarValue(cvar);
-	return value and value ~= "0";
+	return (value ~= nil) and value ~= "0";
 end
 
 function CVarCallbackRegistry:SetCVarCachable(cvar)
 	self.cachable[cvar] = true;
+end
+
+function CVarCallbackRegistry:ClearCache(cvar)
+	self.cvarValueCache[cvar] = nil;
 end
 
 function CVarCallbackRegistry:RegisterCVarChangedCallback(func, owner, ...)

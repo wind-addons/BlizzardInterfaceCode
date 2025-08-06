@@ -80,6 +80,7 @@ local QuestLog =
 		{
 			Name = "GetAbandonQuestItems",
 			Type = "Function",
+			MayReturnNothing = true,
 
 			Returns =
 			{
@@ -89,6 +90,7 @@ local QuestLog =
 		{
 			Name = "GetActiveThreatMaps",
 			Type = "Function",
+			MayReturnNothing = true,
 
 			Returns =
 			{
@@ -121,6 +123,7 @@ local QuestLog =
 		{
 			Name = "GetBountySetInfoForMapID",
 			Type = "Function",
+			MayReturnNothing = true,
 
 			Arguments =
 			{
@@ -138,6 +141,7 @@ local QuestLog =
 		{
 			Name = "GetDistanceSqToQuest",
 			Type = "Function",
+			MayReturnNothing = true,
 
 			Arguments =
 			{
@@ -225,6 +229,7 @@ local QuestLog =
 		{
 			Name = "GetNextWaypoint",
 			Type = "Function",
+			MayReturnNothing = true,
 
 			Arguments =
 			{
@@ -241,6 +246,7 @@ local QuestLog =
 		{
 			Name = "GetNextWaypointForMap",
 			Type = "Function",
+			MayReturnNothing = true,
 
 			Arguments =
 			{
@@ -257,6 +263,7 @@ local QuestLog =
 		{
 			Name = "GetNextWaypointText",
 			Type = "Function",
+			MayReturnNothing = true,
 
 			Arguments =
 			{
@@ -402,6 +409,7 @@ local QuestLog =
 		{
 			Name = "GetQuestLogMajorFactionReputationRewards",
 			Type = "Function",
+			MayReturnNothing = true,
 
 			Arguments =
 			{
@@ -416,6 +424,7 @@ local QuestLog =
 		{
 			Name = "GetQuestLogPortraitGiver",
 			Type = "Function",
+			MayReturnNothing = true,
 
 			Arguments =
 			{
@@ -434,6 +443,7 @@ local QuestLog =
 		{
 			Name = "GetQuestObjectives",
 			Type = "Function",
+			MayReturnNothing = true,
 
 			Arguments =
 			{
@@ -520,6 +530,7 @@ local QuestLog =
 		{
 			Name = "GetQuestsOnMap",
 			Type = "Function",
+			MayReturnNothing = true,
 
 			Arguments =
 			{
@@ -528,7 +539,7 @@ local QuestLog =
 
 			Returns =
 			{
-				{ Name = "quests", Type = "table", InnerType = "QuestOnMapInfo", Nilable = false },
+				{ Name = "quests", Type = "table", InnerType = "QuestPOIMapInfo", Nilable = false },
 			},
 		},
 		{
@@ -572,6 +583,7 @@ local QuestLog =
 		{
 			Name = "GetTimeAllowed",
 			Type = "Function",
+			MayReturnNothing = true,
 
 			Arguments =
 			{
@@ -617,6 +629,7 @@ local QuestLog =
 		{
 			Name = "GetZoneStoryInfo",
 			Type = "Function",
+			MayReturnNothing = true,
 
 			Arguments =
 			{
@@ -692,20 +705,6 @@ local QuestLog =
 			Returns =
 			{
 				{ Name = "isImportant", Type = "bool", Nilable = false },
-			},
-		},
-		{
-			Name = "IsLegendaryQuest",
-			Type = "Function",
-
-			Arguments =
-			{
-				{ Name = "questID", Type = "number", Nilable = false },
-			},
-
-			Returns =
-			{
-				{ Name = "isLegendaryQuest", Type = "bool", Nilable = false },
 			},
 		},
 		{
@@ -876,20 +875,6 @@ local QuestLog =
 			Returns =
 			{
 				{ Name = "isInvasion", Type = "bool", Nilable = false },
-			},
-		},
-		{
-			Name = "IsQuestRepeatableType",
-			Type = "Function",
-
-			Arguments =
-			{
-				{ Name = "questID", Type = "number", Nilable = false },
-			},
-
-			Returns =
-			{
-				{ Name = "isRepeatableType", Type = "bool", Nilable = false },
 			},
 		},
 		{
@@ -1467,18 +1452,7 @@ local QuestLog =
 				{ Name = "finished", Type = "bool", Nilable = false },
 				{ Name = "numFulfilled", Type = "number", Nilable = false },
 				{ Name = "numRequired", Type = "number", Nilable = false },
-			},
-		},
-		{
-			Name = "QuestOnMapInfo",
-			Type = "Structure",
-			Fields =
-			{
-				{ Name = "questID", Type = "number", Nilable = false },
-				{ Name = "x", Type = "number", Nilable = false },
-				{ Name = "y", Type = "number", Nilable = false },
-				{ Name = "type", Type = "number", Nilable = false },
-				{ Name = "isMapIndicatorQuest", Type = "bool", Nilable = false },
+				{ Name = "objectiveType", Type = "QuestObjectiveType", Nilable = true },
 			},
 		},
 		{

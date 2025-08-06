@@ -83,6 +83,7 @@ end
 
 SettingsElementHierarchyMixin = {};
 
+-- When adding a parent setting that is informed by children settings, set commit orders so that the parent setting is committed last. See CLASS-35305.
 function SettingsElementHierarchyMixin:SetParentInitializer(parentInitializer, modifyPredicate)
 	assert(parentInitializer);
 	if parentInitializer == self then
@@ -122,7 +123,22 @@ function SettingsElementHierarchyMixin:AddEvaluateStateFrameEvent(event)
 	table.insert(self.evaluateStateFrameEvents, event);
 end
 
-SettingsListPanelInitializer = CreateFromMixins(ScrollBoxFactoryInitializerMixin, SettingsSearchableElementMixin);
+SettingsNewTagMixin = { };
+
+function SettingsNewTagMixin:IsNewTagShown()
+	if self.data.newTagID then
+		return IsNewSettingInCurrentVersion(self.data.newTagID);
+	end
+end
+
+function SettingsNewTagMixin:MarkSettingAsSeen()
+	if self.data.newTagID then
+		MarkNewSettingAsSeen(self.data.newTagID);
+		return true;
+	end
+end
+
+SettingsListPanelInitializer = CreateFromMixins(ScrollBoxFactoryInitializerMixin, SettingsSearchableElementMixin, SettingsNewTagMixin);
 
 SettingsListElementInitializer = CreateFromMixins(ScrollBoxFactoryInitializerMixin, SettingsElementHierarchyMixin, SettingsSearchableElementMixin);
 
@@ -185,8 +201,19 @@ function SettingsListElementInitializer:GetSetting()
 end
 
 function SettingsListElementInitializer:IsNewTagShown()
-	local setting = self:GetSetting();
-	return setting and IsNewSettingInCurrentVersion(setting:GetVariable());
+	local returnVal = SettingsNewTagMixin.IsNewTagShown(self);
+	if returnVal == nil then
+		local setting = self:GetSetting();
+		returnVal = setting and IsNewSettingInCurrentVersion(setting:GetVariable());
+	end
+	return returnVal;
+end
+
+function SettingsListElementInitializer:MarkSettingAsSeen()
+	if not SettingsNewTagMixin.MarkSettingAsSeen(self) then
+		local setting = self:GetSetting();
+		MarkNewSettingAsSeen(setting:GetVariable());
+	end
 end
 
 function SettingsListElementInitializer:SetSettingIntercept(interceptFunction)
@@ -246,7 +273,11 @@ function SettingsListElementMixin:Init(initializer)
 
 	self:SetTooltipFunc(GenerateClosure(InitializeSettingTooltip, initializer));
 
-	self.NewFeature:SetShown(initializer:IsNewTagShown());
+	local newTagShown = initializer:IsNewTagShown();
+	self.NewFeature:SetShown(newTagShown);
+	if newTagShown then
+		initializer:MarkSettingAsSeen();
+	end
 end
 
 function SettingsListElementMixin:Release()
@@ -558,13 +589,13 @@ end
 function SettingsDropdownControlMixin:EvaluateState()
 	SettingsListElementMixin.EvaluateState(self);
 	local enabled = SettingsControlMixin.IsEnabled(self);
-	self.Control.Dropdown:SetEnabled(enabled);
+	self.Control:SetEnabled(enabled);
 
 	self:DisplayEnabled(enabled);
 	return enabled;
 end
 
-SettingsButtonControlMixin = CreateFromMixins(SettingsListElementMixin);
+SettingsButtonControlMixin = CreateFromMixins(SettingsListElementMixin, SettingsNewTagMixin);
 
 function SettingsButtonControlMixin:OnLoad()
 	SettingsListElementMixin.OnLoad(self);
@@ -596,6 +627,14 @@ function SettingsButtonControlMixin:Init(initializer)
 	end
 
 	self.Button.New:SetShown(initializer.showNew);
+
+	local newTagShown = self:IsNewTagShown();
+	self.NewFeature:SetShown(newTagShown);
+	if newTagShown then
+		self:MarkSettingAsSeen();
+	end
+
+	self:EvaluateState();
 end
 
 function SettingsButtonControlMixin:Release()
@@ -603,8 +642,20 @@ function SettingsButtonControlMixin:Release()
 	SettingsListElementMixin.Release(self);
 end
 
-function CreateSettingsButtonInitializer(name, buttonText, buttonClick, tooltip, addSearchTags)
-	local data = {name = name, buttonText = buttonText, buttonClick = buttonClick, tooltip = tooltip};
+function SettingsButtonControlMixin:SetButtonState(enabled)
+	self.Button:SetEnabled(enabled);
+end
+
+function SettingsButtonControlMixin:EvaluateState()
+	SettingsListElementMixin.EvaluateState(self);
+	local enabled = SettingsControlMixin.IsEnabled(self);
+
+	self:SetButtonState(enabled);
+	self:DisplayEnabled(enabled);
+end
+
+function CreateSettingsButtonInitializer(name, buttonText, buttonClick, tooltip, addSearchTags, newTagID)
+	local data = {name = name, buttonText = buttonText, buttonClick = buttonClick, tooltip = tooltip, newTagID = newTagID};
 	local initializer = Settings.CreateElementInitializer("SettingButtonControlTemplate", data);
 
 	-- Some settings buttons, like ones that open to a setting category, should not show up in search.
@@ -805,7 +856,7 @@ function SettingsCheckboxSliderControlMixin:Release()
 	SettingsListElementMixin.Release(self);
 end
 
-function CreateSettingsCheckboxSliderInitializer(cbSetting, cbLabel, cbTooltip, sliderSetting, sliderOptions, sliderLabel, sliderTooltip)
+function CreateSettingsCheckboxSliderInitializer(cbSetting, cbLabel, cbTooltip, sliderSetting, sliderOptions, sliderLabel, sliderTooltip, newTagID)
 	local data =
 	{
 		name = cbLabel,
@@ -817,6 +868,7 @@ function CreateSettingsCheckboxSliderInitializer(cbSetting, cbLabel, cbTooltip, 
 		sliderOptions = sliderOptions,
 		sliderLabel = sliderLabel,
 		sliderTooltip = sliderTooltip,
+		newTagID = newTagID,
 	};
 	local initializer = Settings.CreateSettingInitializer("SettingsCheckboxSliderControlTemplate", data);
 	initializer:AddSearchTags(cbLabel, sliderLabel);

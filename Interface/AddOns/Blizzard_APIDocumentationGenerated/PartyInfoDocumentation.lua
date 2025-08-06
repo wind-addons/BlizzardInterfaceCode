@@ -39,6 +39,25 @@ local PartyInfo =
 			},
 		},
 		{
+			Name = "CanStartInstanceAbandonVote",
+			Type = "Function",
+			Documentation = { "Returns whether it's possible to start a vote at this time" },
+
+			Returns =
+			{
+				{ Name = "canStart", Type = "bool", Nilable = false },
+			},
+		},
+		{
+			Name = "ChallengeModeRestrictionsActive",
+			Type = "Function",
+
+			Returns =
+			{
+				{ Name = "restrictionsActive", Type = "bool", Nilable = false },
+			},
+		},
+		{
 			Name = "ConfirmConvertToRaid",
 			Type = "Function",
 			Documentation = { "Immediately convert to raid with no regard for potentially destructive actions." },
@@ -56,6 +75,7 @@ local PartyInfo =
 		{
 			Name = "ConfirmInviteUnit",
 			Type = "Function",
+			RequiresValidInviteTarget = true,
 			Documentation = { "Immediately invites the named unit to a party, with no regard for potentially destructive actions." },
 
 			Arguments =
@@ -76,6 +96,7 @@ local PartyInfo =
 		{
 			Name = "ConfirmRequestInviteFromUnit",
 			Type = "Function",
+			RequiresValidInviteTarget = true,
 			Documentation = { "Immediately request an invite into the target party, this is the confirmation function to call after RequestInviteFromUnit, or if you would like to skip the confirmation process." },
 
 			Arguments =
@@ -116,6 +137,7 @@ local PartyInfo =
 		{
 			Name = "GetActiveCategories",
 			Type = "Function",
+			MayReturnNothing = true,
 
 			Returns =
 			{
@@ -123,8 +145,61 @@ local PartyInfo =
 			},
 		},
 		{
+			Name = "GetAvailableLootMethods",
+			Type = "Function",
+
+			Returns =
+			{
+				{ Name = "methods", Type = "table", InnerType = "LootMethod", Nilable = false },
+			},
+		},
+		{
+			Name = "GetInstanceAbandonShutdownTime",
+			Type = "Function",
+			Documentation = { "Returns the total duration of the shutdown time after a vote passes and how much time is left before it ends" },
+
+			Returns =
+			{
+				{ Name = "durationSeconds", Type = "number", Nilable = false, Default = 0 },
+				{ Name = "timeLeftSeconds", Type = "number", Nilable = false, Default = 0 },
+			},
+		},
+		{
+			Name = "GetInstanceAbandonVoteRequirements",
+			Type = "Function",
+			Documentation = { "Returns values controlling the vote" },
+
+			Returns =
+			{
+				{ Name = "votesRequired", Type = "number", Nilable = false, Default = 0 },
+				{ Name = "keystoneOwnerVoteWeight", Type = "number", Nilable = false, Default = 0 },
+			},
+		},
+		{
+			Name = "GetInstanceAbandonVoteResponse",
+			Type = "Function",
+			Documentation = { "Returns how the player voted, nil for not yet" },
+
+			Returns =
+			{
+				{ Name = "response", Type = "bool", Nilable = true },
+			},
+		},
+		{
+			Name = "GetInstanceAbandonVoteTime",
+			Type = "Function",
+			Documentation = { "Returns the total duration of the vote and how much time is left before it ends" },
+
+			Returns =
+			{
+				{ Name = "durationSeconds", Type = "number", Nilable = false, Default = 0 },
+				{ Name = "timeLeftSeconds", Type = "number", Nilable = false, Default = 0 },
+			},
+		},
+		{
 			Name = "GetInviteConfirmationInvalidQueues",
 			Type = "Function",
+			MayReturnNothing = true,
 
 			Arguments =
 			{
@@ -139,6 +214,7 @@ local PartyInfo =
 		{
 			Name = "GetInviteReferralInfo",
 			Type = "Function",
+			MayReturnNothing = true,
 
 			Arguments =
 			{
@@ -152,6 +228,17 @@ local PartyInfo =
 				{ Name = "outRelationType", Type = "PartyRequestJoinRelation", Nilable = false },
 				{ Name = "outIsQuickJoin", Type = "bool", Nilable = false },
 				{ Name = "outClubId", Type = "ClubId", Nilable = false },
+			},
+		},
+		{
+			Name = "GetLootMethod",
+			Type = "Function",
+
+			Returns =
+			{
+				{ Name = "method", Type = "LootMethod", Nilable = false },
+				{ Name = "masterLootPartyID", Type = "number", Nilable = true },
+				{ Name = "masterLooterRaidID", Type = "number", Nilable = true },
 			},
 		},
 		{
@@ -184,6 +271,16 @@ local PartyInfo =
 			},
 		},
 		{
+			Name = "GetNumInstanceAbandonGroupVoteResponses",
+			Type = "Function",
+			Documentation = { "Returns how many players have voted either way" },
+
+			Returns =
+			{
+				{ Name = "count", Type = "number", Nilable = false },
+			},
+		},
+		{
 			Name = "GetRestrictPings",
 			Type = "Function",
 
@@ -195,11 +292,30 @@ local PartyInfo =
 		{
 			Name = "InviteUnit",
 			Type = "Function",
+			RequiresValidInviteTarget = true,
 			Documentation = { "Attempt to invite the named unit to a party, requires confirmation in some cases (e.g. the party will convert to a raid, or if there is a party sync in progress)." },
 
 			Arguments =
 			{
 				{ Name = "targetName", Type = "cstring", Nilable = false },
+			},
+		},
+		{
+			Name = "IsChallengeModeActive",
+			Type = "Function",
+
+			Returns =
+			{
+				{ Name = "active", Type = "bool", Nilable = false },
+			},
+		},
+		{
+			Name = "IsChallengeModeKeystoneOwner",
+			Type = "Function",
+
+			Returns =
+			{
+				{ Name = "isKeystoneOwner", Type = "bool", Nilable = false },
 			},
 		},
 		{
@@ -279,6 +395,7 @@ local PartyInfo =
 		{
 			Name = "RequestInviteFromUnit",
 			Type = "Function",
+			RequiresValidInviteTarget = true,
 			Documentation = { "Attempt to request an invite into the target party, requires confirmation in some cases (e.g. there is a party sync in progress)." },
 
 			Arguments =
@@ -290,6 +407,32 @@ local PartyInfo =
 			},
 		},
 		{
+			Name = "SetInstanceAbandonVoteResponse",
+			Type = "Function",
+			HasRestrictions = true,
+			Documentation = { "Vote on whether to abandon instance, true for yes, false for no" },
+
+			Arguments =
+			{
+				{ Name = "response", Type = "bool", Nilable = false },
+			},
+		},
+		{
+			Name = "SetLootMethod",
+			Type = "Function",
+
+			Arguments =
+			{
+				{ Name = "method", Type = "LootMethod", Nilable = false },
+				{ Name = "lootMaster", Type = "string", Nilable = true },
+			},
+
+			Returns =
+			{
+				{ Name = "success", Type = "bool", Nilable = false },
+			},
+		},
+		{
 			Name = "SetRestrictPings",
 			Type = "Function",
 
@@ -297,6 +440,12 @@ local PartyInfo =
 			{
 				{ Name = "restrictTo", Type = "RestrictPingsTo", Nilable = false },
 			},
+		},
+		{
+			Name = "StartInstanceAbandonVote",
+			Type = "Function",
+			HasRestrictions = true,
+			Documentation = { "Start the vote" },
 		},
 	},
 
@@ -366,6 +515,25 @@ local PartyInfo =
 			LiteralName = "GROUP_ROSTER_UPDATE",
 		},
 		{
+			Name = "InstanceAbandonVoteFinished",
+			Type = "Event",
+			LiteralName = "INSTANCE_ABANDON_VOTE_FINISHED",
+			Payload =
+			{
+				{ Name = "votePassed", Type = "bool", Nilable = false },
+			},
+		},
+		{
+			Name = "InstanceAbandonVoteStarted",
+			Type = "Event",
+			LiteralName = "INSTANCE_ABANDON_VOTE_STARTED",
+		},
+		{
+			Name = "InstanceAbandonVoteUpdated",
+			Type = "Event",
+			LiteralName = "INSTANCE_ABANDON_VOTE_UPDATED",
+		},
+		{
 			Name = "InstanceBootStart",
 			Type = "Event",
 			LiteralName = "INSTANCE_BOOT_START",
@@ -407,6 +575,10 @@ local PartyInfo =
 			Name = "LeavePartyConfirmation",
 			Type = "Event",
 			LiteralName = "LEAVE_PARTY_CONFIRMATION",
+			Payload =
+			{
+				{ Name = "reason", Type = "LeavePartyConfirmReason", Nilable = false },
+			},
 		},
 		{
 			Name = "PartyInviteCancel",
@@ -521,27 +693,6 @@ local PartyInfo =
 			},
 		},
 		{
-			Name = "RoleChangedInform",
-			Type = "Event",
-			LiteralName = "ROLE_CHANGED_INFORM",
-			Payload =
-			{
-				{ Name = "changedName", Type = "cstring", Nilable = false },
-				{ Name = "fromName", Type = "cstring", Nilable = false },
-				{ Name = "oldRole", Type = "cstring", Nilable = false },
-				{ Name = "newRole", Type = "cstring", Nilable = false },
-			},
-		},
-		{
-			Name = "RolePollBegin",
-			Type = "Event",
-			LiteralName = "ROLE_POLL_BEGIN",
-			Payload =
-			{
-				{ Name = "fromName", Type = "cstring", Nilable = false },
-			},
-		},
-		{
 			Name = "VoteKickReasonNeeded",
 			Type = "Event",
 			LiteralName = "VOTE_KICK_REASON_NEEDED",
@@ -555,6 +706,18 @@ local PartyInfo =
 
 	Tables =
 	{
+		{
+			Name = "LeavePartyConfirmReason",
+			Type = "Enumeration",
+			NumValues = 2,
+			MinValue = 0,
+			MaxValue = 1,
+			Fields =
+			{
+				{ Name = "QuestSync", Type = "LeavePartyConfirmReason", EnumValue = 0 },
+				{ Name = "RestrictedChallengeMode", Type = "LeavePartyConfirmReason", EnumValue = 1 },
+			},
+		},
 		{
 			Name = "PartyRequestJoinRelation",
 			Type = "Enumeration",

@@ -3,15 +3,12 @@
 ## DefaultState: enabled
 ## AllowLoad: Both
 ## AllowLoadGameType: mainline
-## Dependencies: Blizzard_PrintHandler, Blizzard_Menu
-## OptionalDep: Blizzard_FontStyles_Glue, Blizzard_FontStyles_Frame
+## Dependencies: Blizzard_Fonts_Shared, Blizzard_SharedXMLBase, Blizzard_PrintHandler, Blizzard_Menu, Blizzard_Colors, Blizzard_HelpPlate
 Shared\LocalizationMachinery.lua
-EnvironmentUtil.lua
 ProjectConstants.lua
 WoWLabs\ProjectConstants.lua
 SharedConstants.lua
 middleclass.lua
-Color.lua
 ColorUtil.lua
 Mainline\ClassColors.lua
 SharedColorConstants.lua
@@ -25,6 +22,7 @@ SmoothStatusBar.lua
 PredictedSetting.lua
 SecureUtil.lua
 TimeUtil.lua
+BenchmarkUtil.lua
 VectorLib.xml
 Mainline\NineSliceLayouts.lua
 NineSlice.lua
@@ -46,6 +44,8 @@ ManagedLayoutFrame.lua
 ManagedLayoutFrame.xml
 SpaceToFitLayoutFrame.lua
 SpaceToFitLayoutFrame.xml
+ScaleToFitFrame.lua
+ScaleToFitFrame.xml
 BulletPoint.lua
 BulletPoint.xml
 KeyCommand.lua
@@ -53,7 +53,7 @@ PixelUtilSecure.lua
 PixelUtil.lua
 TableBuilder.lua
 NewFeatureLabel.xml
-Mainline\VASErrorLookup.lua
+Shared\VASErrorLookup.lua
 SelectableButton.lua
 SelectableButton.xml
 ButtonGroup.lua
@@ -93,9 +93,9 @@ Mainline\Scroll\OribosScrollBar.lua
 Mainline\Scroll\OribosScrollBar.xml
 Shared\Scroll\MinimalScrollBar.lua
 Shared\Scroll\MinimalScrollBar.xml
-Mainline\ButtonTray\ButtonTrayUtil.lua
-Mainline\ButtonTray\ButtonTray.lua
-Mainline\ButtonTray\ButtonTray.xml
+Shared\ButtonTray\ButtonTrayUtil.lua
+Shared\ButtonTray\ButtonTray.lua
+Shared\ButtonTray\ButtonTray.xml
 StringUtil.lua
 TypeUtil.lua
 Dump.lua
@@ -142,8 +142,8 @@ Blizzard_RadialWheel.lua
 Blizzard_RadialWheel.xml
 Backdrop.xml
 
-Mainline\LoadSystem\LoadSystemTemplates.lua
-Mainline\LoadSystem\LoadSystemTemplates.xml
+Shared\LoadSystem\LoadSystemTemplates.lua
+Shared\LoadSystem\LoadSystemTemplates.xml
 Mainline\TabSystem\TabSystemTemplates.lua
 Mainline\TabSystem\TabSystemTemplates.xml
 Mainline\TabSystem\TabSystemOwner.lua
@@ -170,6 +170,9 @@ Spinner.xml
 Mainline\SharedUIPanelTemplates.lua
 PortraitFrame.lua
 Mainline\SharedUIPanelTemplates.xml
+Mainline\SharedCollectionUtil.lua
+Mainline\SharedCollectionTemplates.lua
+Mainline\SharedCollectionTemplates.xml
 CustomBindingButtonMixin.lua
 CustomBindingButtonTemplate.xml
 Shared\Tabs\MinimalTab.lua
@@ -181,6 +184,8 @@ Mainline\UIDropDownMenuTemplates.lua
 Mainline\UIDropDownMenuTemplates.xml
 Mainline\UIDropDownMenu.xml
 DialogUtil.lua
+
+Mainline\Sound.lua
 
 Mainline\ModelFrames.lua
 Mainline\ModelFrameMixin.lua
@@ -195,6 +200,8 @@ AlertFrameIntrinsic.lua
 AlertFrameIntrinsic.xml
 Mainline\MajorFactionRenownSharedTemplates.lua
 Mainline\MajorFactionRenownSharedTemplates.xml
+
+CommonUIPanelTemplates.xml
 
 ## Deprecated. Retained only for addons
 HybridScrollFrame.lua

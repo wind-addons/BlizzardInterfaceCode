@@ -1276,8 +1276,6 @@ function CommunitiesFrameMixin:OnClubSelected(clubId)
 	if clubSelected then
 		SetCVar("lastSelectedClubId", clubId)
 
-		C_Club.SetClubPresenceSubscription(clubId);
-
 		local clubInfo = C_Club.GetClubInfo(clubId);
 		if clubInfo then
 			local selectedStream = self:GetSelectedStreamForClub(clubId);
@@ -1353,11 +1351,11 @@ function CommunitiesFrameMixin:OnClubSelected(clubId)
 	self:TriggerEvent(CommunitiesFrameMixin.Event.ClubSelected, clubId);
 
 	if clubSelected then
-		self:UpdateStreamDropdown(); -- TODO:: Convert this to use the registry system of callbacks.
+		self:UpdateStreamDropdown();
 	end
 
 	if self.CommunitiesList:IsShown() then
-		self.CommunitiesList:OnClubSelected(clubId); -- TODO:: Convert this to use the registry system of callbacks.
+		self.CommunitiesList:OnClubSelected(clubId);
 	end
 
 	self:CheckForTutorials();

@@ -7,6 +7,15 @@ local DelvesUI =
 	Functions =
 	{
 		{
+			Name = "GetCompanionInfoForActivePlayer",
+			Type = "Function",
+
+			Returns =
+			{
+				{ Name = "playerCompanionInfoID", Type = "number", Nilable = false },
+			},
+		},
+		{
 			Name = "GetCreatureDisplayInfoForCompanion",
 			Type = "Function",
 
@@ -21,13 +30,29 @@ local DelvesUI =
 			},
 		},
 		{
+			Name = "GetCurioLink",
+			Type = "Function",
+			Documentation = { "Given the spell ID for an owned curio and its rarity, return a spell link style hyperlink for the curio spell, since they aren't items when learned" },
+
+			Arguments =
+			{
+				{ Name = "spellID", Type = "number", Nilable = false },
+				{ Name = "rarity", Type = "CurioRarity", Nilable = false },
+			},
+
+			Returns =
+			{
+				{ Name = "curioLink", Type = "cstring", Nilable = false },
+			},
+		},
+		{
 			Name = "GetCurioNodeForCompanion",
 			Type = "Function",
 
 			Arguments =
 			{
-				{ Name = "companionID", Type = "number", Nilable = true },
 				{ Name = "curioType", Type = "CurioType", Nilable = false },
+				{ Name = "companionID", Type = "number", Nilable = true },
 			},
 
 			Returns =
@@ -134,8 +159,8 @@ local DelvesUI =
 
 			Arguments =
 			{
-				{ Name = "companionID", Type = "number", Nilable = true },
 				{ Name = "roleType", Type = "CompanionRoleType", Nilable = false },
+				{ Name = "companionID", Type = "number", Nilable = true },
 			},
 
 			Returns =
@@ -231,6 +256,16 @@ local DelvesUI =
 			Documentation = { "Signaled when SpellScript calls change the data for players/parties owning a delve or when the delve is shut down." },
 		},
 		{
+			Name = "DelveAssistAction",
+			Type = "Event",
+			LiteralName = "DELVE_ASSIST_ACTION",
+			Documentation = { "Signaled when an assist action occurs in a delve." },
+			Payload =
+			{
+				{ Name = "data", Type = "DelveAssistActionData", Nilable = false },
+			},
+		},
+		{
 			Name = "DelvesAccountDataElementChanged",
 			Type = "Event",
 			LiteralName = "DELVES_ACCOUNT_DATA_ELEMENT_CHANGED",
@@ -272,13 +307,14 @@ local DelvesUI =
 		{
 			Name = "CompanionRoleType",
 			Type = "Enumeration",
-			NumValues = 2,
+			NumValues = 3,
 			MinValue = 0,
-			MaxValue = 1,
+			MaxValue = 2,
 			Fields =
 			{
 				{ Name = "Dps", Type = "CompanionRoleType", EnumValue = 0 },
 				{ Name = "Heal", Type = "CompanionRoleType", EnumValue = 1 },
+				{ Name = "Tank", Type = "CompanionRoleType", EnumValue = 2 },
 			},
 		},
 		{

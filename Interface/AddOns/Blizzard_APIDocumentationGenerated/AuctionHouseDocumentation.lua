@@ -55,6 +55,7 @@ local AuctionHouse =
 		{
 			Name = "CancelAuction",
 			Type = "Function",
+			HasRestrictions = true,
 
 			Arguments =
 			{
@@ -86,6 +87,7 @@ local AuctionHouse =
 		{
 			Name = "ConfirmPostCommodity",
 			Type = "Function",
+			HasRestrictions = true,
 
 			Arguments =
 			{
@@ -98,6 +100,7 @@ local AuctionHouse =
 		{
 			Name = "ConfirmPostItem",
 			Type = "Function",
+			HasRestrictions = true,
 
 			Arguments =
 			{
@@ -251,6 +254,7 @@ local AuctionHouse =
 		{
 			Name = "GetExtraBrowseInfo",
 			Type = "Function",
+			MayReturnNothing = true,
 
 			Arguments =
 			{
@@ -317,6 +321,7 @@ local AuctionHouse =
 		{
 			Name = "GetItemKeyRequiredLevel",
 			Type = "Function",
+			MayReturnNothing = true,
 
 			Arguments =
 			{
@@ -557,6 +562,7 @@ local AuctionHouse =
 		{
 			Name = "GetReplicateItemBattlePetInfo",
 			Type = "Function",
+			MayReturnNothing = true,
 
 			Arguments =
 			{
@@ -788,6 +794,7 @@ local AuctionHouse =
 		{
 			Name = "PlaceBid",
 			Type = "Function",
+			HasRestrictions = true,
 
 			Arguments =
 			{
@@ -798,6 +805,7 @@ local AuctionHouse =
 		{
 			Name = "PostCommodity",
 			Type = "Function",
+			HasRestrictions = true,
 
 			Arguments =
 			{
@@ -815,6 +823,7 @@ local AuctionHouse =
 		{
 			Name = "PostItem",
 			Type = "Function",
+			HasRestrictions = true,
 
 			Arguments =
 			{
@@ -873,10 +882,6 @@ local AuctionHouse =
 			Name = "ReplicateItems",
 			Type = "Function",
 			Documentation = { "This function should be used in place of an 'allItem' QueryAuctionItems call to query the entire auction house." },
-		},
-		{
-			Name = "RequestFavorites",
-			Type = "Function",
 		},
 		{
 			Name = "RequestMoreBrowseResults",
@@ -989,13 +994,32 @@ local AuctionHouse =
 			},
 		},
 		{
+			Name = "ShouldAutoPopulatePrice",
+			Type = "Function",
+
+			Returns =
+			{
+				{ Name = "shouldAutoPopulatePrice", Type = "bool", Nilable = false },
+			},
+		},
+		{
 			Name = "StartCommoditiesPurchase",
 			Type = "Function",
+			HasRestrictions = true,
 
 			Arguments =
 			{
 				{ Name = "itemID", Type = "number", Nilable = false },
 				{ Name = "quantity", Type = "number", Nilable = false },
+			},
+		},
+		{
+			Name = "SupportsCopperValues",
+			Type = "Function",
+
+			Returns =
+			{
+				{ Name = "supportsCopperValues", Type = "bool", Nilable = false },
 			},
 		},
 	},

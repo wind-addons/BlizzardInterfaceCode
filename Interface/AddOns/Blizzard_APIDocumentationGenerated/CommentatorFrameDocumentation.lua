@@ -19,6 +19,7 @@ local CommentatorFrame =
 		{
 			Name = "AddTrackedDefensiveAuras",
 			Type = "Function",
+			RequiresActiveCommentator = true,
 
 			Arguments =
 			{
@@ -28,6 +29,7 @@ local CommentatorFrame =
 		{
 			Name = "AddTrackedOffensiveAuras",
 			Type = "Function",
+			RequiresActiveCommentator = true,
 
 			Arguments =
 			{
@@ -85,14 +87,17 @@ local CommentatorFrame =
 		{
 			Name = "ClearCameraTarget",
 			Type = "Function",
+			RequiresActiveCommentator = true,
 		},
 		{
 			Name = "ClearFollowTarget",
 			Type = "Function",
+			RequiresActiveCommentator = true,
 		},
 		{
 			Name = "ClearLookAtTarget",
 			Type = "Function",
+			RequiresActiveCommentator = true,
 
 			Arguments =
 			{
@@ -102,14 +107,18 @@ local CommentatorFrame =
 		{
 			Name = "EnterInstance",
 			Type = "Function",
+			RequiresCommentator = true,
 		},
 		{
 			Name = "ExitInstance",
 			Type = "Function",
+			RequiresCommentator = true,
 		},
 		{
 			Name = "FindSpectatedUnit",
 			Type = "Function",
+			MayReturnNothing = true,
+			RequiresActiveCommentator = true,
 
 			Arguments =
 			{
@@ -158,6 +167,7 @@ local CommentatorFrame =
 		{
 			Name = "FollowPlayer",
 			Type = "Function",
+			RequiresActiveCommentator = true,
 
 			Arguments =
 			{
@@ -169,6 +179,7 @@ local CommentatorFrame =
 		{
 			Name = "FollowUnit",
 			Type = "Function",
+			RequiresActiveCommentator = true,
 
 			Arguments =
 			{
@@ -178,10 +189,12 @@ local CommentatorFrame =
 		{
 			Name = "ForceFollowTransition",
 			Type = "Function",
+			RequiresActiveCommentator = true,
 		},
 		{
 			Name = "GetAdditionalCameraWeight",
 			Type = "Function",
+			RequiresActiveCommentator = true,
 
 			Returns =
 			{
@@ -192,6 +205,8 @@ local CommentatorFrame =
 		{
 			Name = "GetAdditionalCameraWeightByToken",
 			Type = "Function",
+			MayReturnNothing = true,
+			RequiresActiveCommentator = true,
 
 			Arguments =
 			{
@@ -206,6 +221,7 @@ local CommentatorFrame =
 		{
 			Name = "GetAllPlayerOverrideNames",
 			Type = "Function",
+			RequiresActiveCommentator = true,
 
 			Returns =
 			{
@@ -215,6 +231,8 @@ local CommentatorFrame =
 		{
 			Name = "GetCamera",
 			Type = "Function",
+			MayReturnNothing = true,
+			RequiresActiveCommentator = true,
 
 			Returns =
 			{
@@ -239,6 +257,8 @@ local CommentatorFrame =
 		{
 			Name = "GetCameraPosition",
 			Type = "Function",
+			MayReturnNothing = true,
+			RequiresActiveCommentator = true,
 
 			Returns =
 			{
@@ -259,6 +279,7 @@ local CommentatorFrame =
 		{
 			Name = "GetCurrentMapID",
 			Type = "Function",
+			RequiresCommentator = true,
 
 			Returns =
 			{
@@ -322,6 +343,7 @@ local CommentatorFrame =
 		{
 			Name = "GetIndirectSpellID",
 			Type = "Function",
+			RequiresActiveCommentator = true,
 
 			Arguments =
 			{
@@ -336,6 +358,8 @@ local CommentatorFrame =
 		{
 			Name = "GetInstanceInfo",
 			Type = "Function",
+			MayReturnNothing = true,
+			RequiresCommentator = true,
 
 			Arguments =
 			{
@@ -364,6 +388,8 @@ local CommentatorFrame =
 		{
 			Name = "GetMapInfo",
 			Type = "Function",
+			MayReturnNothing = true,
+			RequiresCommentator = true,
 
 			Arguments =
 			{
@@ -462,6 +488,8 @@ local CommentatorFrame =
 		{
 			Name = "GetNumPlayers",
 			Type = "Function",
+			MayReturnNothing = true,
+			RequiresActiveCommentator = true,
 
 			Arguments =
 			{
@@ -491,6 +519,8 @@ local CommentatorFrame =
 		{
 			Name = "GetPlayerAuraInfo",
 			Type = "Function",
+			MayReturnNothing = true,
+			RequiresActiveCommentator = true,
 
 			Arguments =
 			{
@@ -509,6 +539,8 @@ local CommentatorFrame =
 		{
 			Name = "GetPlayerAuraInfoByUnit",
 			Type = "Function",
+			MayReturnNothing = true,
+			RequiresActiveCommentator = true,
 
 			Arguments =
 			{
@@ -526,6 +558,8 @@ local CommentatorFrame =
 		{
 			Name = "GetPlayerCooldownInfo",
 			Type = "Function",
+			MayReturnNothing = true,
+			RequiresActiveCommentator = true,
 
 			Arguments =
 			{
@@ -544,6 +578,8 @@ local CommentatorFrame =
 		{
 			Name = "GetPlayerCooldownInfoByUnit",
 			Type = "Function",
+			MayReturnNothing = true,
+			RequiresActiveCommentator = true,
 
 			Arguments =
 			{
@@ -561,6 +597,8 @@ local CommentatorFrame =
 		{
 			Name = "GetPlayerCrowdControlInfo",
 			Type = "Function",
+			MayReturnNothing = true,
+			RequiresActiveCommentator = true,
 
 			Arguments =
 			{
@@ -578,6 +616,8 @@ local CommentatorFrame =
 		{
 			Name = "GetPlayerCrowdControlInfoByUnit",
 			Type = "Function",
+			MayReturnNothing = true,
+			RequiresActiveCommentator = true,
 
 			Arguments =
 			{
@@ -594,6 +634,7 @@ local CommentatorFrame =
 		{
 			Name = "GetPlayerData",
 			Type = "Function",
+			RequiresActiveCommentator = true,
 
 			Arguments =
 			{
@@ -609,6 +650,7 @@ local CommentatorFrame =
 		{
 			Name = "GetPlayerFlagInfo",
 			Type = "Function",
+			RequiresActiveCommentator = true,
 
 			Arguments =
 			{
@@ -624,6 +666,7 @@ local CommentatorFrame =
 		{
 			Name = "GetPlayerFlagInfoByUnit",
 			Type = "Function",
+			RequiresActiveCommentator = true,
 
 			Arguments =
 			{
@@ -638,6 +681,8 @@ local CommentatorFrame =
 		{
 			Name = "GetPlayerItemCooldownInfo",
 			Type = "Function",
+			MayReturnNothing = true,
+			RequiresActiveCommentator = true,
 
 			Arguments =
 			{
@@ -656,6 +701,8 @@ local CommentatorFrame =
 		{
 			Name = "GetPlayerItemCooldownInfoByUnit",
 			Type = "Function",
+			MayReturnNothing = true,
+			RequiresActiveCommentator = true,
 
 			Arguments =
 			{
@@ -673,6 +720,7 @@ local CommentatorFrame =
 		{
 			Name = "GetPlayerOverrideName",
 			Type = "Function",
+			MayReturnNothing = true,
 
 			Arguments =
 			{
@@ -687,6 +735,8 @@ local CommentatorFrame =
 		{
 			Name = "GetPlayerSpellCharges",
 			Type = "Function",
+			MayReturnNothing = true,
+			RequiresActiveCommentator = true,
 
 			Arguments =
 			{
@@ -706,6 +756,8 @@ local CommentatorFrame =
 		{
 			Name = "GetPlayerSpellChargesByUnit",
 			Type = "Function",
+			MayReturnNothing = true,
+			RequiresActiveCommentator = true,
 
 			Arguments =
 			{
@@ -733,6 +785,7 @@ local CommentatorFrame =
 		{
 			Name = "GetSmoothFollowTransitioning",
 			Type = "Function",
+			RequiresActiveCommentator = true,
 
 			Returns =
 			{
@@ -760,6 +813,7 @@ local CommentatorFrame =
 		{
 			Name = "GetStartLocation",
 			Type = "Function",
+			MayReturnNothing = true,
 
 			Arguments =
 			{
@@ -811,6 +865,7 @@ local CommentatorFrame =
 		{
 			Name = "GetTrackedSpellID",
 			Type = "Function",
+			RequiresActiveCommentator = true,
 
 			Arguments =
 			{
@@ -825,6 +880,7 @@ local CommentatorFrame =
 		{
 			Name = "GetTrackedSpells",
 			Type = "Function",
+			RequiresActiveCommentator = true,
 
 			Arguments =
 			{
@@ -841,6 +897,7 @@ local CommentatorFrame =
 		{
 			Name = "GetTrackedSpellsByUnit",
 			Type = "Function",
+			RequiresActiveCommentator = true,
 
 			Arguments =
 			{
@@ -856,6 +913,7 @@ local CommentatorFrame =
 		{
 			Name = "GetUnitData",
 			Type = "Function",
+			RequiresActiveCommentator = true,
 
 			Arguments =
 			{
@@ -870,6 +928,8 @@ local CommentatorFrame =
 		{
 			Name = "GetWargameInfo",
 			Type = "Function",
+			MayReturnNothing = true,
+			RequiresCommentator = true,
 
 			Arguments =
 			{
@@ -887,6 +947,7 @@ local CommentatorFrame =
 		{
 			Name = "HasTrackedAuras",
 			Type = "Function",
+			RequiresActiveCommentator = true,
 
 			Arguments =
 			{
@@ -920,6 +981,7 @@ local CommentatorFrame =
 		{
 			Name = "IsTrackedDefensiveAura",
 			Type = "Function",
+			RequiresActiveCommentator = true,
 
 			Arguments =
 			{
@@ -934,6 +996,7 @@ local CommentatorFrame =
 		{
 			Name = "IsTrackedOffensiveAura",
 			Type = "Function",
+			RequiresActiveCommentator = true,
 
 			Arguments =
 			{
@@ -948,6 +1011,7 @@ local CommentatorFrame =
 		{
 			Name = "IsTrackedSpell",
 			Type = "Function",
+			RequiresActiveCommentator = true,
 
 			Arguments =
 			{
@@ -965,6 +1029,7 @@ local CommentatorFrame =
 		{
 			Name = "IsTrackedSpellByUnit",
 			Type = "Function",
+			RequiresActiveCommentator = true,
 
 			Arguments =
 			{
@@ -990,6 +1055,7 @@ local CommentatorFrame =
 		{
 			Name = "LookAtPlayer",
 			Type = "Function",
+			RequiresActiveCommentator = true,
 
 			Arguments =
 			{
@@ -1014,6 +1080,7 @@ local CommentatorFrame =
 		{
 			Name = "RequestPlayerCooldownInfo",
 			Type = "Function",
+			RequiresActiveCommentator = true,
 
 			Arguments =
 			{
@@ -1042,10 +1109,12 @@ local CommentatorFrame =
 		{
 			Name = "ResetTrackedAuras",
 			Type = "Function",
+			RequiresActiveCommentator = true,
 		},
 		{
 			Name = "SetAdditionalCameraWeight",
 			Type = "Function",
+			RequiresActiveCommentator = true,
 
 			Arguments =
 			{
@@ -1057,6 +1126,7 @@ local CommentatorFrame =
 		{
 			Name = "SetAdditionalCameraWeightByToken",
 			Type = "Function",
+			RequiresActiveCommentator = true,
 
 			Arguments =
 			{
@@ -1095,6 +1165,7 @@ local CommentatorFrame =
 		{
 			Name = "SetCamera",
 			Type = "Function",
+			RequiresActiveCommentator = true,
 
 			Arguments =
 			{
@@ -1110,6 +1181,7 @@ local CommentatorFrame =
 		{
 			Name = "SetCameraCollision",
 			Type = "Function",
+			RequiresActiveCommentator = true,
 
 			Arguments =
 			{
@@ -1119,6 +1191,7 @@ local CommentatorFrame =
 		{
 			Name = "SetCameraPosition",
 			Type = "Function",
+			RequiresActiveCommentator = true,
 
 			Arguments =
 			{
@@ -1176,6 +1249,7 @@ local CommentatorFrame =
 		{
 			Name = "SetFollowCameraSpeeds",
 			Type = "Function",
+			RequiresActiveCommentator = true,
 
 			Arguments =
 			{
@@ -1213,6 +1287,7 @@ local CommentatorFrame =
 		{
 			Name = "SetMapAndInstanceIndex",
 			Type = "Function",
+			RequiresCommentator = true,
 
 			Arguments =
 			{
@@ -1358,6 +1433,7 @@ local CommentatorFrame =
 		{
 			Name = "SetSmoothFollowTransitioning",
 			Type = "Function",
+			RequiresActiveCommentator = true,
 
 			Arguments =
 			{
@@ -1385,6 +1461,7 @@ local CommentatorFrame =
 		{
 			Name = "SetTargetHeightOffset",
 			Type = "Function",
+			RequiresActiveCommentator = true,
 
 			Arguments =
 			{
@@ -1403,10 +1480,26 @@ local CommentatorFrame =
 		{
 			Name = "SnapCameraLookAtPoint",
 			Type = "Function",
+			RequiresActiveCommentator = true,
+		},
+		{
+			Name = "SpellUsesItemCharges",
+			Type = "Function",
+
+			Arguments =
+			{
+				{ Name = "spellID", Type = "number", Nilable = false },
+			},
+
+			Returns =
+			{
+				{ Name = "spellUsesItemCharges", Type = "bool", Nilable = false },
+			},
 		},
 		{
 			Name = "StartWargame",
 			Type = "Function",
+			RequiresCommentator = true,
 
 			Arguments =
 			{
@@ -1428,6 +1521,7 @@ local CommentatorFrame =
 		{
 			Name = "UpdateMapInfo",
 			Type = "Function",
+			RequiresCommentator = true,
 
 			Arguments =
 			{
@@ -1437,6 +1531,7 @@ local CommentatorFrame =
 		{
 			Name = "UpdatePlayerInfo",
 			Type = "Function",
+			RequiresCommentator = true,
 		},
 		{
 			Name = "ZoomIn",

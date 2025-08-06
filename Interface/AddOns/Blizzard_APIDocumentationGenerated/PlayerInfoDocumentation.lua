@@ -25,6 +25,15 @@ local PlayerInfo =
 			},
 		},
 		{
+			Name = "CanPlayerUseEventScheduler",
+			Type = "Function",
+
+			Returns =
+			{
+				{ Name = "canUseEventScheduler", Type = "bool", Nilable = false },
+			},
+		},
+		{
 			Name = "CanPlayerUseMountEquipment",
 			Type = "Function",
 
@@ -109,6 +118,7 @@ local PlayerInfo =
 		{
 			Name = "GetInstancesUnlockedAtLevel",
 			Type = "Function",
+			MayReturnNothing = true,
 
 			Arguments =
 			{
@@ -147,6 +157,7 @@ local PlayerInfo =
 		{
 			Name = "GetPlayerCharacterData",
 			Type = "Function",
+			MayReturnNothing = true,
 
 			Returns =
 			{
@@ -156,6 +167,7 @@ local PlayerInfo =
 		{
 			Name = "GetPlayerMythicPlusRatingSummary",
 			Type = "Function",
+			MayReturnNothing = true,
 			Documentation = { "Returns the players mythic+ rating summary which includes the runs they've completed as well as their current season m+ rating" },
 
 			Arguments =
@@ -189,6 +201,24 @@ local PlayerInfo =
 			Returns =
 			{
 				{ Name = "isVisible", Type = "bool", Nilable = false },
+			},
+		},
+		{
+			Name = "IsAccountBankEnabled",
+			Type = "Function",
+
+			Returns =
+			{
+				{ Name = "isAccountBankEnabled", Type = "bool", Nilable = false },
+			},
+		},
+		{
+			Name = "IsCharacterBankEnabled",
+			Type = "Function",
+
+			Returns =
+			{
+				{ Name = "isCharacterBankEnabled", Type = "bool", Nilable = false },
 			},
 		},
 		{

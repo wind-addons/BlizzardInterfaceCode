@@ -4,6 +4,7 @@ MICRO_BUTTONS = {
 	"TalentMicroButton",
 	"AchievementMicroButton",
 	"QuestLogMicroButton",
+	"SocialsMicroButton",
 	"GuildMicroButton",
 	"EJMicroButton",
 	"CollectionsMicroButton",
@@ -12,6 +13,17 @@ MICRO_BUTTONS = {
 	"MainMenuMicroButton",
 	"HelpMicroButton",
 }
+
+function OverrideMicroMenuPosition(parent, anchor, anchorTo, relAnchor, x, y, isStacked)
+	UpdateMicroButtonsParent(parent);
+	MoveMicroButtons(anchor, anchorTo, relAnchor, x, y, isStacked);
+end
+
+function UpdateMicroButtonsParent(parent)
+	for i=1, #MICRO_BUTTONS do
+		_G[MICRO_BUTTONS[i]]:SetParent(parent);
+	end
+end
 
 function MoveMicroButtons(anchor, anchorTo, relAnchor, x, y, isStacked)
 	CharacterMicroButton:ClearAllPoints();
@@ -47,7 +59,7 @@ function UpdateMicroButtons()
 	if ( PlayerTalentFrame and PlayerTalentFrame:IsShown() ) then
 		TalentMicroButton:SetButtonState("PUSHED", true);
 	else
-		if ( playerLevel < SHOW_SPEC_LEVEL ) then
+		if ( not C_SpecializationInfo.CanPlayerUseTalentSpecUI() ) then
 			TalentMicroButton:Hide();
 			AchievementMicroButton:SetPoint("BOTTOMLEFT", "TalentMicroButton", "BOTTOMLEFT", 0, 0);
 		else
@@ -62,6 +74,10 @@ function UpdateMicroButtons()
 	else
 		QuestLogMicroButton:SetButtonState("NORMAL");
 	end
+
+	SocialsMicroButton:UpdateMicroButton();
+
+	GuildMicroButton:UpdateMicroButton();
 
 	if ( EncounterJournal and EncounterJournal:IsShown() ) then
 		EJMicroButton:SetButtonState("PUSHED", 1);
@@ -129,8 +145,6 @@ function UpdateMicroButtons()
 			AchievementMicroButton:Disable();
 		end
 	end
-
-	GuildMicroButton:UpdateMicroButton();
 end
 
 function AchievementMicroButton_OnLoad()
@@ -263,7 +277,7 @@ function EJMicroButtonMixin:UpdateLastEvaluations()
 	self.lastEvaluatedLevel = playerLevel;
 
 	if (playerLevel == GetMaxLevelForPlayerExpansion()) then
-		local spec = GetSpecialization();
+		local spec = C_SpecializationInfo.GetSpecialization();
 		local ilvl = GetAverageItemLevel();
 
 		self.lastEvaluatedSpec = spec;
@@ -297,7 +311,7 @@ function EJMicroButtonMixin:OnEvent(event, ...)
 		end
 	elseif ( event == "PLAYER_AVG_ITEM_LEVEL_UPDATE" ) then
 		local playerLevel = UnitLevel("player");
-		local spec = GetSpecialization();
+		local spec = C_SpecializationInfo.GetSpecialization();
 		local ilvl = GetAverageItemLevel();
 		if ( playerLevel == GetMaxLevelForPlayerExpansion() and ((not self.lastEvaluatedSpec or self.lastEvaluatedSpec ~= spec) or (not self.lastEvaluatedIlvl or self.lastEvaluatedIlvl < ilvl))) then
 			self.lastEvaluatedSpec = spec;

@@ -15,6 +15,14 @@ local SimpleTextureBaseAPI =
 			},
 		},
 		{
+			Name = "ClearVertexOffsets",
+			Type = "Function",
+
+			Arguments =
+			{
+			},
+		},
+		{
 			Name = "GetAtlas",
 			Type = "Function",
 
@@ -149,6 +157,7 @@ local SimpleTextureBaseAPI =
 		{
 			Name = "GetTextureSliceMargins",
 			Type = "Function",
+			MayReturnNothing = true,
 
 			Arguments =
 			{
@@ -165,6 +174,7 @@ local SimpleTextureBaseAPI =
 		{
 			Name = "GetTextureSliceMode",
 			Type = "Function",
+			MayReturnNothing = true,
 
 			Arguments =
 			{

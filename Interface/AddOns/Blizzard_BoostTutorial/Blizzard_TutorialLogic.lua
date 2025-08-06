@@ -968,7 +968,7 @@ function Class_ActionBarCallout:HighlightPointer(spellID, textID)
 		local finalString = string.format(prompt, binding, spellInfo.name, spellInfo.iconID);
 
 		self:ShowPointerTutorial(finalString, "DOWN", btn);
-		ActionButton_ShowOverlayGlow(btn);
+		ActionButtonSpellAlertManager:ShowAlert(btn);
 
 		return spellID;
 	end
@@ -992,7 +992,7 @@ function Class_ActionBarCallout:DisableActionButtonGlow()
 	for i = 1, 12 do
 		local btn = _G["ActionButton" .. i];
 		if (btn) then
-			ActionButton_HideOverlayGlow(btn);
+			ActionButtonSpellAlertManager:HideAlert(btn);
 		end
 	end
 end
@@ -1196,14 +1196,14 @@ function Class_EquipFirstItemWatcher:GetPotentialItemUpgrades()
 					end
 
 					if (match) then
-						local player, bank, bags, voidStorage, slot, bag = EquipmentManager_UnpackLocation(packedLocation);
+						local locationData = EquipmentManager_GetLocationData(packedLocation);
 
-						if ((player == true) and (bags == true)) then
+						if ((locationData.isPlayer == true) and (locationData.isBags == true)) then
 							if (potentialUpgrades[i] == nil) then
 								potentialUpgrades[i] = {};
 							end
 
-							table.insert(potentialUpgrades[i], self:STRUCT_ItemContainer(itemID, i, bag, slot));
+							table.insert(potentialUpgrades[i], self:STRUCT_ItemContainer(itemID, i, locationData.bag, locationData.slot));
 						end
 					end
 				end
@@ -1983,7 +1983,9 @@ function Class_TurnInQuestWatcher:QUEST_COMPLETE()
 
 	if (GetNumQuestChoices() > 1) then
 		-- Wait one frame to make sure the reward buttons have been positioned
-		C_Timer.After(0.01, function() Tutorials.QuestRewardChoice:Begin(areAllItemsUsable); end);
+		RunNextFrame(function()
+			Tutorials.QuestRewardChoice:Begin(areAllItemsUsable);
+		end);
 	end
 end
 

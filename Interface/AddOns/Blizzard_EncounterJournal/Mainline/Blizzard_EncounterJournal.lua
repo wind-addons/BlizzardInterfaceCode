@@ -110,8 +110,9 @@ local EJ_TIER_DATA =
 
 function GetEJTierData(tier)
 	if tier > #EJ_TIER_DATA then
-		local serverExpansionLevel = GetServerExpansionLevel();
-		return EJ_TIER_DATA[serverExpansionLevel]
+		-- GetServerExpansionLevel returns a 0 based expansion level. Adjust it to map to EJ_TIER_DATA.
+		local serverExpansionLevel = GetServerExpansionLevel() + 1;
+		return EJ_TIER_DATA[serverExpansionLevel] or EJ_TIER_DATA[1];
 	end
 	return EJ_TIER_DATA[tier] or EJ_TIER_DATA[1];
 end
@@ -716,7 +717,7 @@ function EncounterJournal_OnShow(self)
 	elseif ( self.encounter.overviewFrame:IsShown() and EncounterJournal.overviewDefaultRole and not EncounterJournal.encounter.overviewFrame.linkSection ) then
 		local spec, role;
 
-		spec = GetSpecialization();
+		spec = C_SpecializationInfo.GetSpecialization();
 		if (spec) then
 			role = GetSpecializationRoleEnum(spec);
 		else
@@ -1099,12 +1100,37 @@ local function PopulateBossDataProvider()
 	return dataProvider;
 end
 
+local function ShowRenownRewardsTooltip(frame, factionID)
+	GameTooltip:SetOwner(frame, "ANCHOR_RIGHT");
+	RenownRewardUtil.AddMajorFactionToTooltip(GameTooltip, factionID, GenerateClosure(ShowRenownRewardsTooltip, frame, factionID));
+	GameTooltip_AddBlankLineToTooltip(GameTooltip);
+	GameTooltip_AddInstructionLine(GameTooltip, MAJOR_FACTION_BUTTON_TOOLTIP_VIEW_RENOWN);
+	EventRegistry:TriggerEvent("ShowMajorFactionRenown.Tooltip.OnEnter", frame, GameTooltip, factionID);
+	GameTooltip:Show();
+end
+
+local function ShowParagonRewardsTooltip(frame, factionID)
+	EmbeddedItemTooltip:SetOwner(frame, "ANCHOR_RIGHT");
+	ReputationUtil.AddParagonRewardsToTooltip(EmbeddedItemTooltip, factionID);
+	GameTooltip_SetBottomText(EmbeddedItemTooltip, MAJOR_FACTION_BUTTON_TOOLTIP_VIEW_RENOWN, GREEN_FONT_COLOR);
+	EmbeddedItemTooltip:Show();
+end
+
+local function RefreshMajorFactionTooltip(frame, factionID)
+	if C_Reputation.IsFactionParagon(factionID) then
+		ShowParagonRewardsTooltip(frame, factionID);
+	else
+		ShowRenownRewardsTooltip(frame, factionID);
+	end
+end
+
 function EncounterJournal_DisplayInstance(instanceID, noButton)
 	EJ_HideNonInstancePanels();
 
 	local difficultyID = EJ_GetDifficulty();
 
 	local self = EncounterJournal.encounter;
+	self.instance.majorFactionRewardsButton:Hide();
 	EncounterJournal.instanceSelect:Hide();
 	EncounterJournal.encounter:Show();
 	EncounterJournal.creatureDisplayID = 0;
@@ -1115,7 +1141,38 @@ function EncounterJournal_DisplayInstance(instanceID, noButton)
 	EncounterJournal_LootUpdate();
 	EncounterJournal_ClearDetails();
 
-	local instanceName, description, bgImage, _, loreImage, buttonImage, dungeonAreaMapID = EJ_GetInstanceInfo();
+	local instanceName, description, bgImage, _, loreImage, buttonImage, dungeonAreaMapID, _, _, _, covenantID = EJ_GetInstanceInfo();
+
+	-- If there's a covenantID in the instance info, there's a major faction reward track associated with this instance
+	-- Set up the button if the major faction is unlocked and available. On click, it will open the reward track UI
+	if covenantID then
+		local covenantData = C_Covenants.GetCovenantData(covenantID);
+		if covenantData then
+			local majorFactionData = C_MajorFactions.GetMajorFactionData(covenantData.factionID);
+			if majorFactionData and majorFactionData.isUnlocked then
+				self.instance.majorFactionRewardsButton.majorFactionRewardsButtonIcon:SetTexture(string.format("Interface\\ICONS\\UI_MajorFactions_%s_256", majorFactionData.textureKit));
+				
+				self.instance.majorFactionRewardsButton:SetScript("OnClick", function() 
+					EventRegistry:TriggerEvent("MajorFactionRenownMixin.MajorFactionRenownRequest", covenantData.factionID);
+					ToggleMajorFactionRenown();
+				end);
+
+				self.instance.majorFactionRewardsButton:SetScript("OnEnter", function() 
+					RefreshMajorFactionTooltip(self.instance.majorFactionRewardsButton, covenantData.factionID);
+				end);
+
+				self.instance.majorFactionRewardsButton:SetScript("OnLeave", function() 
+					if GameTooltip:GetOwner() == self.instance.majorFactionRewardsButton then
+						GameTooltip:Hide();
+					elseif EmbeddedItemTooltip:GetOwner() == self.instance.majorFactionRewardsButton then
+						EmbeddedItemTooltip:Hide();
+					end
+				end);
+
+				self.instance.majorFactionRewardsButton:Show();
+			end
+		end
+	end
 
 	self.instance.title:SetText(instanceName);
 	self.instance.titleBG:SetWidth(self.instance.title:GetStringWidth() + 80);
@@ -1876,7 +1933,7 @@ function EncounterJournal_ToggleHeaders(self, doNotShift)
 
 			local spec, role;
 
-			spec = GetSpecialization();
+			spec = C_SpecializationInfo.GetSpecialization();
 			if (spec) then
 				role = GetSpecializationRoleEnum(spec);
 			else
@@ -2219,9 +2276,9 @@ function EncounterJournal_SetTooltipWithCompare(tooltip, link, useSpec)
 	if useSpec then
 		classID, specID = EJ_GetLootFilter();
 		if specID == 0 then
-			local spec = GetSpecialization();
+			local spec = C_SpecializationInfo.GetSpecialization();
 			if spec and classID == select(3, UnitClass("player")) then
-				specID = GetSpecializationInfo(spec, nil, nil, nil, UnitSex("player"));
+				specID = C_SpecializationInfo.GetSpecializationInfo(spec, nil, nil, nil, UnitSex("player"));
 			else
 				specID = -1;
 			end
@@ -2892,9 +2949,19 @@ local AdventureJournal_RightDescriptionFonts = {
 	-- "SystemFont_Small", -- 10pt font
 };
 
+function EJSuggestFrame_GetDisplayFrame(suggestionIndex)
+	assert(suggestionIndex <= AJ_MAX_NUM_SUGGESTIONS);
+	if suggestionIndex == 1 then
+		return EncounterJournal.suggestFrame.Suggestion3;
+	elseif suggestionIndex == 2 then
+		return EncounterJournal.suggestFrame.Suggestion2;
+	elseif suggestionIndex == 3 then
+		return EncounterJournal.suggestFrame.Suggestion1;
+	end
+end
+
 function EJSuggestFrame_RefreshDisplay()
 	local instanceSelect = EncounterJournal.instanceSelect;
-	local tab = EncounterJournal.suggestTab;
 	local tierData = GetEJTierData(EJSuggestTab_GetPlayerTierIndex());
 	instanceSelect.bg:SetAtlas(tierData.backgroundAtlas, true);
 
@@ -2916,10 +2983,10 @@ function EJSuggestFrame_RefreshDisplay()
 		suggestion.iconRing:Hide();
 	end
 
-	-- setup the primary suggestion display
-	if ( #self.suggestions > 0 ) then
-		local suggestion = self.Suggestion1;
-		local data = self.suggestions[1];
+	-- setup the big suggestion display with the last one
+	local data = self.suggestions[AJ_MAX_NUM_SUGGESTIONS];
+	if ( data ) then
+		local suggestion = EJSuggestFrame_GetDisplayFrame(AJ_MAX_NUM_SUGGESTIONS);
 
 		local centerDisplay = suggestion.centerDisplay;
 		local titleText = centerDisplay.title.text;
@@ -2990,21 +3057,20 @@ function EJSuggestFrame_RefreshDisplay()
 	end
 
 	-- setup secondary suggestions display
-	if ( #self.suggestions > 1 ) then
+	if ( #self.suggestions > 0 ) then
 		local minTitleIndex = 1;
 		local minDescIndex = 1;
 
-		for i = 2, #self.suggestions do
-			local suggestion = self["Suggestion"..i];
-			if ( not suggestion ) then
+		for i = 1, AJ_MAX_NUM_SUGGESTIONS - 1 do
+			local suggestionData = self.suggestions[i];
+			local suggestion = EJSuggestFrame_GetDisplayFrame(i);
+			if ( not suggestionData or not suggestion ) then
 				break;
 			end
 
 			suggestion.centerDisplay:Show();
-
-			local data = self.suggestions[i];
-			suggestion.centerDisplay.title.text:SetText(data.title);
-			suggestion.centerDisplay.description.text:SetText(data.description ~= "" and data.description or " ");
+			suggestion.centerDisplay.title.text:SetText(suggestionData.title);
+			suggestion.centerDisplay.description.text:SetText(suggestionData.description ~= "" and suggestionData.description or " ");
 
 			-- find largest font that will not truncate the title
 			for fontIndex = minTitleIndex, #AdventureJournal_RightTitleFonts do
@@ -3025,8 +3091,8 @@ function EJSuggestFrame_RefreshDisplay()
 				end
 			end
 
-			if ( data.buttonText and #data.buttonText > 0 ) then
-				suggestion.centerDisplay.button:SetText( data.buttonText );
+			if ( suggestionData.buttonText and #suggestionData.buttonText > 0 ) then
+				suggestion.centerDisplay.button:SetText( suggestionData.buttonText );
 
 				local btnWidth = max(suggestion.centerDisplay.button:GetTextWidth()+42, 116);
 				btnWidth = min( btnWidth, suggestion.centerDisplay:GetWidth() );
@@ -3036,9 +3102,9 @@ function EJSuggestFrame_RefreshDisplay()
 
 			suggestion.icon:Show();
 			suggestion.iconRing:Show();
-			if ( data.iconPath ) then
+			if ( suggestionData.iconPath ) then
 				suggestion.icon:SetMask("Interface\\CharacterFrame\\TempPortraitAlphaMask");
-				suggestion.icon:SetTexture(data.iconPath);
+				suggestion.icon:SetTexture(suggestionData.iconPath);
 			else
 				suggestion.icon:SetMask("Interface\\CharacterFrame\\TempPortraitAlphaMask");
 				suggestion.icon:SetTexture(QUESTION_MARK_ICON);
@@ -3160,8 +3226,9 @@ function AdventureJournal_Reward_OnEnter(self)
 
 			SetItemButtonQuality(frame.Item1, quality, rewardData.itemLink);
 
-			if (quality > Enum.ItemQuality.Common and BAG_ITEM_QUALITY_COLORS[quality]) then
-				frame.Item1.text:SetTextColor(BAG_ITEM_QUALITY_COLORS[quality].r, BAG_ITEM_QUALITY_COLORS[quality].g, BAG_ITEM_QUALITY_COLORS[quality].b);
+			local item1Color = ColorManager.GetColorDataForBagItemQuality(quality);
+			if (quality > Enum.ItemQuality.Common and item1Color) then
+				frame.Item1.text:SetTextColor(item1Color.r, item1Color.g, item1Color.b);
 			end
 
 			local currencyInfo = C_CurrencyInfo.GetCurrencyInfo(rewardData.currencyType);
@@ -3171,8 +3238,10 @@ function AdventureJournal_Reward_OnEnter(self)
 			frame.Item2:Show();
 
 			SetItemButtonQuality(frame.Item2, quality);
-			if (quality > Enum.ItemQuality.Common and BAG_ITEM_QUALITY_COLORS[quality]) then
-				frame.Item2.text:SetTextColor(BAG_ITEM_QUALITY_COLORS[quality].r, BAG_ITEM_QUALITY_COLORS[quality].g, BAG_ITEM_QUALITY_COLORS[quality].b);
+
+			local item2Color = ColorManager.GetColorDataForBagItemQuality(quality);
+			if (quality > Enum.ItemQuality.Common and item2Color) then
+				frame.Item2.text:SetTextColor(item2Color.r, item2Color.g, item2Color.b);
 			end
 
 			if ( rewardData.currencyQuantity and rewardData.currencyQuantity > 1 ) then

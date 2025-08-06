@@ -181,14 +181,15 @@ function PlayerChoiceNormalOptionTemplateMixin:SetupOptionText()
 		self.OptionText:Hide();
 	else
 		self.OptionText:Show();
-		self.OptionText:ClearText()
+		self.OptionText:ClearText();
 		self.OptionText:SetWidth(self.soloOption and WIDE_SIZE_TEXT_WIDTH or STANDARD_SIZE_TEXT_WIDTH);
 		self.OptionText:SetText(self.optionInfo.description);
 	end
 end
 
 function PlayerChoiceNormalOptionTemplateMixin:SetupButtons()
-	self.OptionButtonsContainer:Setup(self.optionInfo, self.soloOption and 2 or 1);
+	self.OptionButtonsContainer.numColumns = (self.soloOption and not self.showAsList) and 2 or 1;
+	PlayerChoiceBaseOptionTemplateMixin.SetupButtons(self);
 end
 
 function PlayerChoiceNormalOptionTemplateMixin:SetupRewards()

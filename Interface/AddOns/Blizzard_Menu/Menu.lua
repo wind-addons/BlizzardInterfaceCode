@@ -1,6 +1,7 @@
 local CreateSecureMap = SecureTypes.CreateSecureMap;
 local CreateSecureArray = SecureTypes.CreateSecureArray;
 local CreateSecureFunction = SecureTypes.CreateSecureFunction;
+local CreateSecureNumber = SecureTypes.CreateSecureNumber;
 local CreateProxy = ProxyUtil.CreateProxy;
 local CreateProxyDirectory = ProxyUtil.CreateProxyDirectory;
 local CreateProxyMixin = ProxyUtil.CreateProxyMixin;
@@ -21,14 +22,30 @@ MenuAttributeDelegate:SetForbidden();
 Menu = {};
 
 local frameDummy = CreateFrame("Frame");
+local mouseEventEnterData = nil;
+local mouseEventLeaveData = false;
+local mouseEventTimeRemaining = CreateSecureNumber(0);
 
 local isEditorShown = nil;
 local isEditMenuShown = nil;
+
+local function HasAnyMouseEventData()
+	return mouseEventLeaveData or mouseEventEnterData;
+end
+
+local function ClearMouseLeaveEventData()
+	if mouseEventLeaveData then
+		mouseEventLeaveData = false;
+		return true;
+	end
+	return false;
+end
 
 local function TryHideTooltip(frame)
 	local tooltip = GetAppropriateTooltip();
 	if tooltip:GetOwner() == frame then
 		tooltip:Hide();
+		tooltip:SetWindow(nil);
 	end
 end
 
@@ -54,10 +71,10 @@ do
 			return;
 		end
 	
-		for index, focus in ipairs(GetMouseFoci()) do
-			if not HandlesGlobalMouseEvent(focus, buttonName) then
-				manager:HandleGlobalMouseEvent(buttonName, event);
-			end
+		-- Only interested in the top focus.
+		local foci = GetMouseFoci();
+		if not HandlesGlobalMouseEvent(foci[1], buttonName) then
+			manager:HandleGlobalMouseEvent(buttonName, event);
 		end
 	end);
 end
@@ -194,6 +211,7 @@ function BaseMenuDescriptionMixin:Init(proxy)
 	self.elementDescriptions = CreateSecureArray();
 	self.initializers = CreateSecureArray();
 	self.finalInitializer = CreateSecureFunction();
+	self.resetters = CreateSecureArray();
 end
 
 function BaseMenuDescriptionMixin:GetMenuMixin()
@@ -424,6 +442,15 @@ function BaseMenuDescriptionMixin:GetFinalInitializer()
 	return self.finalInitializer;
 end
 
+function BaseMenuDescriptionMixin:AddResetter(resetter)
+	self.resetters:UniqueInsert(resetter);
+end
+
+function BaseMenuDescriptionMixin:GetResetters()
+	return self.resetters;
+end
+
+--
 --[[
 The root menu description is the start of the menu hierarchy. Although all of the
 child menu descriptions technically have access to the shared menu properties,
@@ -493,11 +520,12 @@ function MenuElementDescriptionMixin:ForceOpenSubmenu()
 	end
 end
 
-local StandardBaseMenuAPI = 
+local BaseMenuDescriptionAPI = 
 {
 	"HasElements",
 	"AddInitializer",
 	"SetFinalInitializer",
+	"AddResetter",
 	"SetMinimumWidth",
 	"GetMinimumWidth",
 	"SetMaximumWidth",
@@ -516,7 +544,7 @@ do
 		"DisableCompositor",
 		"DisableReacquireFrames",
 	};
-	tAppendAll(Funcs, StandardBaseMenuAPI);
+	tAppendAll(Funcs, BaseMenuDescriptionAPI);
 
 	RootMenuDescriptionProxyMixin = CreateProxyMixin(Proxies, RootMenuDescriptionMixin, Funcs);
 	RootMenuDescriptionProxyMixin.__index = RootMenuDescriptionProxyMixin;
@@ -534,7 +562,7 @@ do
 		"CanOpenSubmenu",
 		"ForceOpenSubmenu",
 	};
-	tAppendAll(Funcs, StandardBaseMenuAPI);
+	tAppendAll(Funcs, BaseMenuDescriptionAPI);
 
 	MenuElementDescriptionProxyMixin = CreateProxyMixin(Proxies, MenuElementDescriptionMixin, Funcs);
 	MenuElementDescriptionProxyMixin.__index = MenuElementDescriptionProxyMixin;
@@ -1446,7 +1474,7 @@ function MenuMixin:PerformLayout()
 end
 
 do
-	local function FlipHorizontally(point, relativePoint)
+	local function ShouldFlipHorizontally(point, relativePoint)
 		if point == "TOPLEFT" and relativePoint == "TOPRIGHT" then
 			return true;
 		elseif point == "BOTTOMLEFT" and relativePoint == "BOTTOMRIGHT" then
@@ -1463,7 +1491,7 @@ do
 		return false;
 	end
 
-	local function FlipVertically(point, relativePoint)
+	local function ShouldFlipVertically(point, relativePoint)
 		if point == "TOPRIGHT" and relativePoint == "BOTTOMRIGHT" then
 			return true;
 		elseif point == "TOPLEFT" and relativePoint == "BOTTOMLEFT" then
@@ -1478,6 +1506,22 @@ do
 			return true;
 		end
 		return false;
+	end
+
+	local function GetContextMenuFlipVerticalPoint(point)
+		if point == "TOPLEFT" then
+			return "BOTTOMLEFT";
+		elseif point == "TOPRIGHT" then
+			return "BOTTOMRIGHT";
+		elseif point == "BOTTOMLEFT" then
+			return "TOPLEFT";
+		elseif point == "BOTTOMRIGHT" then
+			return "TOPRIGHT";
+		elseif point == "TOP" then
+			return "BOTTOM";
+		elseif point == "BOTTOM" then
+			return "TOP";
+		end
 	end
 
 	local function FlipPoint(frame, point, relativeKey, relativePoint, x, y)
@@ -1513,11 +1557,29 @@ do
 	
 		if overflowHorizontal or overflowVertical then
 			for index = 1, menuFrame:GetNumPoints() do
+				local flipped = false;
 				local point, relativeKey, relativePoint, x, y = menuFrame:GetPoint(index);
-				if overflowHorizontal and FlipHorizontally(point, relativePoint) then
-					FlipPoint(menuFrame, point, relativeKey, relativePoint, -x, y);
-				elseif overflowVertical and FlipVertically(point, relativePoint) then
-					FlipPoint(menuFrame, point, relativeKey, relativePoint, x, -y);
+				local asContextMenu = menuFrame.asContextMenu;
+				-- Context menus can only ever be flipped vertically. They clamp horizontally.
+				if (not asContextMenu) and overflowHorizontal then
+					if ShouldFlipHorizontally(point, relativePoint) then
+						FlipPoint(menuFrame, point, relativeKey, relativePoint, -x, y);
+						flipped = true;
+					end
+				end
+				
+				if (not flipped) and overflowVertical then
+					if asContextMenu then
+						-- A context menu frame is always anchored to the UI origin, so to flip we
+						-- replace the menu's point and retain it's relative point.
+						menuFrame:ClearPoint(point);
+						local flipPoint = GetContextMenuFlipVerticalPoint(point);
+						menuFrame:SetPoint(flipPoint, relativeKey, relativePoint, x, y);
+					else
+						if ShouldFlipVertically(point, relativePoint) then
+							FlipPoint(menuFrame, point, relativeKey, relativePoint, x, -y);
+						end
+					end
 				end
 			end
 		end
@@ -1546,12 +1608,6 @@ function MenuMixin:ReinitializeAll()
 	self:PerformLayout();
 end
 
-local function DetachCompositor(compositor)
-	if compositor then
-		compositor:Detach();
-	end
-end
-
 function MenuMixin:DiscardChildFrames()
 	--[[
 	Releasing the compositors will cause any keys assigned or changed to be discarded.
@@ -1565,12 +1621,20 @@ function MenuMixin:DiscardChildFrames()
 
 	local isCompositorEnabled = self.menuDescription:IsCompositorEnabled();
 	for index, frame in self.frames:Enumerate() do
+		local descriptionProxy = frame:GetElementDescription();
+		local description = Proxies:ToPrivate(descriptionProxy);
+		description:GetResetters():ExecuteRange(function(index, resetter)
+			resetter(frame);
+		end);
+
 		-- Compositor check avoids iterating over the secure map if we don't need to.
 		if isCompositorEnabled then
 			local compositor = self.elementCompositors:GetValue(frame);
-			securecallfunction(DetachCompositor, compositor);
+			if compositor then
+				compositor:Detach();
+			end
 		end
-
+		
 		MenuElementFactory:Release(frame);
 	end
 
@@ -1699,6 +1763,32 @@ end
 
 local MenuManagerMixin = CreateFromMixinsPrivate(ProxyConvertablePrivateMixin);
 
+function MenuManagerMixin:ProcessMouseEventLeaveData()
+	if securecallfunction(ClearMouseLeaveEventData) then
+		if not self:ContainsCursor() then
+			self:CollapseMenusUntilLevel(self:GetRetainMenuLevel());
+		end
+	end
+end
+
+function MenuManagerMixin:ProcessMouseEventEnterData()
+	if not mouseEventEnterData then
+		return;
+	end
+
+	local frame = mouseEventEnterData.frame;
+	local level = mouseEventEnterData.level;
+	mouseEventEnterData = nil;
+
+	if frame:IsMouseOver() then
+		self:CheckForSubmenu(frame, level);
+	end
+end
+
+function MenuManagerMixin:CancelMouseEventTimer()
+	frameDummy:SetScript("OnUpdate", nil);
+end
+
 function MenuManagerMixin:Init(proxy)
 	local tags = ProxyConvertablePrivateMixin.Init(self, proxy, Proxies);
 	tags[proxy] = "MenuManagerMixin";
@@ -1707,6 +1797,36 @@ function MenuManagerMixin:Init(proxy)
 	self.frameFactory = CreateFrameFactory();
 	
 	self:SetRetainMenuLevel(0);
+
+	self.mouseEventTimerCallback = function(frame, dt)
+		if not securecallfunction(HasAnyMouseEventData) then
+			return;
+		end
+
+		mouseEventTimeRemaining:Subtract(dt);
+
+		if mouseEventTimeRemaining:GetValue() > 0 then
+			return;
+		end
+
+		self:ProcessMouseEventLeaveData();
+		self:ProcessMouseEventEnterData();
+
+		self:CancelMouseEventTimer();
+	end
+end
+
+function MenuManagerMixin:RestartMouseEventTimer()
+	mouseEventTimeRemaining:SetValue(.33);
+
+	frameDummy:SetScript("OnUpdate", self.mouseEventTimerCallback);
+end
+
+function MenuManagerMixin:ClearMouseEventData()
+	mouseEventLeaveData = false;
+	mouseEventEnterData = nil;
+
+	self:CancelMouseEventTimer();
 end
 
 local function GetMenuDescriptionTag(tags, menu)
@@ -1787,6 +1907,8 @@ function MenuManagerMixin:RemoveMenu(menu)
 
 	self:CollapseMenusUntilLevel(menu:GetLevel());
 
+	local proxy = menu:ToProxy();
+
 	-- All scripts must be finished before the compositor flushes our keys.
 	-- Notify listeners that the menu is closing.
 	menu.menuDescription:GetMenuReleasedCallbacks():ExecuteRange(function(index, onReleased)
@@ -1804,7 +1926,6 @@ function MenuManagerMixin:RemoveMenu(menu)
 	The proxy for a menu must be manually removed because a pool frame is never
 	dereferenced and will always persist.
 	]]
-	local proxy = menu:ToProxy();
 	Proxies:RemoveProxy(proxy);
 
 	-- Renable any scrolling we disabled when the menu was opened.
@@ -1815,6 +1936,10 @@ function MenuManagerMixin:RemoveMenu(menu)
 	end
 
 	self.frameFactory:Release(proxy);
+
+	if self.menus:IsEmpty() then
+		self:ClearMouseEventData();
+	end
 end
 
 function MenuManagerMixin:FindMenu(menuDescription)
@@ -1877,6 +2002,7 @@ function MenuManagerMixin:GenerateSubmenuInternal(menuDescription, level, relati
 	params.menuDescription = menuDescription;
 	params.level = level;
 	params.menuPositionFunc = SetMenuPosition;
+	params.relativeFrame = relativeFrame;
 	return self:GenerateMenuInternal(params);
 end
 
@@ -1952,6 +2078,7 @@ function MenuManagerMixin:AcquireMenu(params)
 		end
 	end
 	proxy.ownerRegion = ownerRegion;
+	proxy.asContextMenu = params.asContextMenu;
 	proxy:SetFrameStrata(strata);
 
 	local window = parent:GetWindow();
@@ -1959,6 +2086,17 @@ function MenuManagerMixin:AcquireMenu(params)
 	if anchor then
 		local relativeTo = anchor:GetRelativeTo();
 		window = relativeTo:GetWindow();
+	end
+
+	if not window then
+		local relativeFrame = params.relativeFrame;
+		if relativeFrame then
+			window = relativeFrame:GetWindow();
+		end
+	end
+
+	if (not window) and ownerRegion then
+		window = ownerRegion:GetWindow();
 	end
 
 	proxy:SetWindow(window);
@@ -2102,19 +2240,28 @@ do
 	end
 end
 
-function MenuManagerMixin:EnterFrame(frame, menu, level)
-	self:SetRetainMenuLevel(level);
+function MenuManagerMixin:SetEventLeaveData()
+	mouseEventLeaveData = true;
+	self:RestartMouseEventTimer();
+end
 
-	self:CheckForSubmenu(frame, level);
+function MenuManagerMixin:SetEventEnterData(frame, menu, level)
+	mouseEventEnterData = {frame = frame, menu = menu, level = level};
+
+	self:RestartMouseEventTimer();
+end
+
+function MenuManagerMixin:EnterFrame(frame, menu, level)
+	self:SetEventEnterData(frame, menu, level);
+
+	self:SetRetainMenuLevel(level);
 
 	local descriptionProxy = frame:GetElementDescription();
 	descriptionProxy:HandleOnEnter(frame);
 end
 
 function MenuManagerMixin:LeaveFrame(frame, menu)
-	if not self:ContainsCursor() then
-		self:CollapseMenusUntilLevel(self:GetRetainMenuLevel());
-	end
+	self:SetEventLeaveData();
 
 	local descriptionProxy = frame:GetElementDescription();
 	descriptionProxy:HandleOnLeave(frame);
@@ -2125,9 +2272,7 @@ function MenuManagerMixin:OnMenuEnter(level)
 end
 
 function MenuManagerMixin:OnMenuLeave()
-	if not self:ContainsCursor() then
-		self:CollapseMenusUntilLevel(self:GetRetainMenuLevel());
-	end
+	self:SetEventLeaveData();
 end
 
 local function SecureTaggedMenuOpened(menuDescription)
@@ -2169,6 +2314,10 @@ function MenuManagerMixin:GenerateMenuInternal(params)
 	menuPositionFunc(menu:ToProxy());	
 	
 	local function OnMouseDown(frame)
+		-- The enter is discarded when we stop the timer, but we still need to process the leave.
+		self:ProcessMouseEventLeaveData();
+		self:ClearMouseEventData();
+
 		self:CheckForSubmenu(frame, menu:GetLevel());
 	end
 
@@ -2297,11 +2446,11 @@ function MenuManagerMixin:OpenContextMenu(ownerRegion, menuDescription)
 	assert(ownerRegion, "MenuManagerMixin:OpenContextMenu(ownerRegion, menuDescription): ownerRegion was not provided.");
 
 	local function SetMenuPosition(menuFrame)
-		local x, y = InputUtil.GetAnchorPositionAtCursor();
-		menuFrame:SetPoint("TOPLEFT", x, y);
+		InputUtil.AnchorRegionToCursor(menuFrame, "TOPLEFT");
 	end
 
 	local params = {};
+	params.asContextMenu = true;
 	params.ownerRegion = ownerRegion;
 	params.menuDescription = menuDescription;
 	params.menuPositionFunc = SetMenuPosition;

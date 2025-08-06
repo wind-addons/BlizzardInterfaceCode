@@ -7,20 +7,6 @@ local MajorFactions =
 	Functions =
 	{
 		{
-			Name = "GetCovenantIDForMajorFaction",
-			Type = "Function",
-
-			Arguments =
-			{
-				{ Name = "majorFactionID", Type = "number", Nilable = false },
-			},
-
-			Returns =
-			{
-				{ Name = "covenantID", Type = "number", Nilable = false },
-			},
-		},
-		{
 			Name = "GetCurrentRenownLevel",
 			Type = "Function",
 
@@ -129,6 +115,20 @@ local MajorFactions =
 			},
 		},
 		{
+			Name = "IsMajorFactionHiddenFromExpansionPage",
+			Type = "Function",
+
+			Arguments =
+			{
+				{ Name = "majorFactionID", Type = "number", Nilable = false },
+			},
+
+			Returns =
+			{
+				{ Name = "isHidden", Type = "bool", Nilable = false },
+			},
+		},
+		{
 			Name = "IsWeeklyRenownCapped",
 			Type = "Function",
 
@@ -198,6 +198,8 @@ local MajorFactions =
 				{ Name = "textureKit", Type = "textureKit", Nilable = false },
 				{ Name = "celebrationSoundKit", Type = "number", Nilable = false },
 				{ Name = "renownFanfareSoundKitID", Type = "number", Nilable = false },
+				{ Name = "factionFontColor", Type = "DBColorExport", Nilable = true },
+				{ Name = "renownTrackLevelEffectID", Type = "number", Nilable = true },
 			},
 		},
 		{

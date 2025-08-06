@@ -133,6 +133,7 @@ local Transmog =
 		{
 			Name = "GetBaseCategory",
 			Type = "Function",
+			MayReturnNothing = true,
 
 			Arguments =
 			{
@@ -175,6 +176,7 @@ local Transmog =
 		{
 			Name = "GetPending",
 			Type = "Function",
+			MayReturnNothing = true,
 
 			Arguments =
 			{
@@ -203,6 +205,7 @@ local Transmog =
 		{
 			Name = "GetSlotForInventoryType",
 			Type = "Function",
+			MayReturnNothing = true,
 
 			Arguments =
 			{
@@ -217,6 +220,7 @@ local Transmog =
 		{
 			Name = "GetSlotInfo",
 			Type = "Function",
+			MayReturnNothing = true,
 
 			Arguments =
 			{
@@ -238,6 +242,7 @@ local Transmog =
 		{
 			Name = "GetSlotUseError",
 			Type = "Function",
+			MayReturnNothing = true,
 
 			Arguments =
 			{
@@ -253,6 +258,7 @@ local Transmog =
 		{
 			Name = "GetSlotVisualInfo",
 			Type = "Function",
+			MayReturnNothing = true,
 
 			Arguments =
 			{
@@ -294,6 +300,15 @@ local Transmog =
 			Returns =
 			{
 				{ Name = "isBeingCollapsed", Type = "bool", Nilable = false },
+			},
+		},
+		{
+			Name = "IsTransmogEnabled",
+			Type = "Function",
+
+			Returns =
+			{
+				{ Name = "isTransmogEnabled", Type = "bool", Nilable = false },
 			},
 		},
 		{

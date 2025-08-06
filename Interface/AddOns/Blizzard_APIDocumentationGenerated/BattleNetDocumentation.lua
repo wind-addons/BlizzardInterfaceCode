@@ -107,6 +107,11 @@ local BattleNet =
 				{ Name = "gameAccountInfo", Type = "BNetGameAccountInfo", Nilable = true },
 			},
 		},
+		{
+			Name = "InstallHighResTextures",
+			Type = "Function",
+			HasRestrictions = true,
+		},
 	},
 
 	Events =
@@ -159,7 +164,6 @@ local BattleNet =
 				{ Name = "characterLevel", Type = "number", Nilable = true },
 				{ Name = "richPresence", Type = "string", Nilable = true },
 				{ Name = "playerGuid", Type = "WOWGUID", Nilable = true },
-				{ Name = "isWowMobile", Type = "bool", Nilable = false },
 				{ Name = "canSummon", Type = "bool", Nilable = false },
 				{ Name = "hasFocus", Type = "bool", Nilable = false },
 				{ Name = "regionID", Type = "number", Nilable = false },

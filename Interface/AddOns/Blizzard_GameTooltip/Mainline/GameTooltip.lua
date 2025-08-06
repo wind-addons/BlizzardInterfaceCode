@@ -217,7 +217,8 @@ end
 function GameTooltip_AddQuestTimeToTooltip(tooltip, questID)
 	local formattedTime, color, secondsRemaining = WorldMap_GetQuestTimeForTooltip(questID);
 	if formattedTime and color then
-		GameTooltip_AddColoredLine(tooltip, formattedTime, color);
+		formattedTime = color:WrapTextInColorCode(formattedTime);
+		GameTooltip_AddNormalLine(tooltip, MAP_TOOLTIP_TIME_LEFT:format(formattedTime));
 	end
 end
 
@@ -285,6 +286,10 @@ function GameTooltip_SetBottomText(self, text, lineColor)
 		self.BottomFontString:SetText(text);
 		self.BottomFontString:SetVertexColor(lineColor:GetRGBA());
 	end
+end
+
+function GameTooltip_SetBottomInstructions(self, ...)
+	GameTooltip_SetBottomText(self, table.concat({ ... }, "\n"), GREEN_FONT_COLOR);
 end
 
 function GameTooltip_OnLoad(self)
@@ -365,6 +370,13 @@ function GameTooltip_OnShow(self)
 end
 
 function GameTooltip_OnHide(self)
+	for i, info in ipairs(self.infoList or {}) do
+		local inventoryType = info.tooltipData.worldLootObjectInventoryType;
+		if inventoryType then
+			EventRegistry:TriggerEvent("WorldLootObjectTooltip.Hidden", inventoryType, self);
+		end
+	end
+
 	self.waitingForData = false;
 	local style = nil;
 	SharedTooltip_SetBackdropStyle(self, style, self.IsEmbedded);
@@ -385,8 +397,6 @@ function GameTooltip_OnHide(self)
 
 	GameTooltip_ClearStatusBars(self);
 	GameTooltip_ClearStatusBarWatch(self);
-
-	EventRegistry:TriggerEvent("GameTooltip.HideTooltip", self);
 end
 
 function GameTooltip_CycleSecondaryComparedItem(self)
@@ -581,6 +591,10 @@ function GameTooltip_Hide()
 	GameTooltip_HideBattlePetTooltip();
 end
 
+function GameTooltip_HideTooltip(tooltip)
+	tooltip:Hide();
+end
+
 function GameTooltip_HideResetCursor()
 	GameTooltip:Hide();
 	ResetCursor();
@@ -613,8 +627,13 @@ function GameTooltip_AddQuest(self, questIDArg)
 		self.worldQuest = true;
 		local tagInfo = C_QuestLog.GetQuestTagInfo(self.questID);
 		local quality = tagInfo and tagInfo.quality or Enum.WorldQuestQuality.Common;
-		local color = WORLD_QUEST_QUALITY_COLORS[quality].color;
-		GameTooltip_SetTitle(GameTooltip, title, color);
+
+		local colorData = ColorManager.GetColorDataForWorldQuestQuality(quality)
+		if colorData then
+			GameTooltip_SetTitle(GameTooltip, title, colorData.color);
+		else
+			GameTooltip_SetTitle(GameTooltip, title);
+		end
 
 		if C_QuestLog.IsAccountQuest(questID) then
 			GameTooltip_AddColoredLine(GameTooltip, ACCOUNT_QUEST_LABEL, ACCOUNT_WIDE_FONT_COLOR);
@@ -821,7 +840,9 @@ function EmbeddedItemTooltip_SetSpellByQuestReward(self, spellID, questID)
 		self:Show();
 		EmbeddedItemTooltip_PrepareForFollower(self);
 		local data = GarrisonFollowerTooltipTemplate_BuildDefaultDataForID(spellInfo.garrFollowerID);
-		GarrisonFollowerTooltipTemplate_SetGarrisonFollower(self.FollowerTooltip, data);
+		if data then
+			GarrisonFollowerTooltipTemplate_SetGarrisonFollower(self.FollowerTooltip, data);
+		end
 		EmbeddedItemTooltip_UpdateSize(self);
 		return true;
 	elseif spellInfo.name and spellInfo.texture then
@@ -921,17 +942,19 @@ function GameTooltipDataMixin:OnEvent(event, ...)
 end
 
 function GameTooltipDataMixin:SetWorldCursor(anchorType)
+	local tooltipData = C_TooltipInfo.GetWorldCursor();
 	if anchorType == Enum.WorldCursorAnchorType.Default then
 		GameTooltip_SetDefaultAnchor(self, UIParent);
 	elseif anchorType == Enum.WorldCursorAnchorType.Cursor then
-		self:SetOwner(UIParent, "ANCHOR_CURSOR");
+		local tooltipAnchor = (tooltipData and tooltipData.worldLootObjectInventoryType) and "ANCHOR_CURSOR_RIGHT" or "ANCHOR_CURSOR";
+		self:SetOwner(UIParent, tooltipAnchor);
 	elseif anchorType == Enum.WorldCursorAnchorType.Nameplate then
 		self:SetOwner(UIParent, "ANCHOR_NONE");
 		self:SetObjectTooltipPosition();
 	end
 
 	local oldInfo = self:GetPrimaryTooltipInfo();
-	local tooltipData = C_TooltipInfo.GetWorldCursor();
+	
 	if tooltipData then
 		local tooltipInfo = {
 			getterName = "GetWorldCursor",

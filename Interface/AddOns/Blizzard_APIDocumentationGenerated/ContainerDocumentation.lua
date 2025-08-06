@@ -9,6 +9,7 @@ local Container =
 		{
 			Name = "ContainerIDToInventoryID",
 			Type = "Function",
+			MayReturnNothing = true,
 
 			Arguments =
 			{
@@ -90,6 +91,7 @@ local Container =
 		{
 			Name = "GetContainerFreeSlots",
 			Type = "Function",
+			MayReturnNothing = true,
 
 			Arguments =
 			{
@@ -121,6 +123,7 @@ local Container =
 		{
 			Name = "GetContainerItemDurability",
 			Type = "Function",
+			MayReturnNothing = true,
 
 			Arguments =
 			{
@@ -147,12 +150,13 @@ local Container =
 			Returns =
 			{
 				{ Name = "inSet", Type = "bool", Nilable = false },
-				{ Name = "setList", Type = "cstring", Nilable = false },
+				{ Name = "setList", Type = "string", Nilable = false },
 			},
 		},
 		{
 			Name = "GetContainerItemID",
 			Type = "Function",
+			MayReturnNothing = true,
 
 			Arguments =
 			{
@@ -168,6 +172,7 @@ local Container =
 		{
 			Name = "GetContainerItemInfo",
 			Type = "Function",
+			MayReturnNothing = true,
 
 			Arguments =
 			{
@@ -198,6 +203,7 @@ local Container =
 		{
 			Name = "GetContainerItemPurchaseCurrency",
 			Type = "Function",
+			MayReturnNothing = true,
 
 			Arguments =
 			{
@@ -215,6 +221,7 @@ local Container =
 		{
 			Name = "GetContainerItemPurchaseInfo",
 			Type = "Function",
+			MayReturnNothing = true,
 
 			Arguments =
 			{
@@ -231,6 +238,7 @@ local Container =
 		{
 			Name = "GetContainerItemPurchaseItem",
 			Type = "Function",
+			MayReturnNothing = true,
 
 			Arguments =
 			{
@@ -301,6 +309,7 @@ local Container =
 		{
 			Name = "GetItemCooldown",
 			Type = "Function",
+			MayReturnNothing = true,
 
 			Arguments =
 			{
@@ -330,6 +339,21 @@ local Container =
 			Returns =
 			{
 				{ Name = "isEnabled", Type = "bool", Nilable = false },
+			},
+		},
+		{
+			Name = "HasContainerItem",
+			Type = "Function",
+
+			Arguments =
+			{
+				{ Name = "containerIndex", Type = "BagIndex", Nilable = false },
+				{ Name = "slotIndex", Type = "luaIndex", Nilable = false },
+			},
+
+			Returns =
+			{
+				{ Name = "hasItem", Type = "bool", Nilable = false },
 			},
 		},
 		{
@@ -489,11 +513,16 @@ local Container =
 			Type = "Function",
 		},
 		{
-			Name = "SortBankBags",
+			Name = "SortBank",
 			Type = "Function",
+
+			Arguments =
+			{
+				{ Name = "bankType", Type = "BankType", Nilable = false },
+			},
 		},
 		{
-			Name = "SortReagentBankBags",
+			Name = "SortBankBags",
 			Type = "Function",
 		},
 		{

@@ -33,15 +33,6 @@ local PlayerScript =
 			},
 		},
 		{
-			Name = "AreAccountAchievementsHidden",
-			Type = "Function",
-
-			Returns =
-			{
-				{ Name = "result", Type = "bool", Nilable = false },
-			},
-		},
-		{
 			Name = "AutoEquipCursorItem",
 			Type = "Function",
 		},
@@ -75,6 +66,7 @@ local PlayerScript =
 		{
 			Name = "CanLootUnit",
 			Type = "Function",
+			MayReturnNothing = true,
 
 			Arguments =
 			{
@@ -367,6 +359,17 @@ local PlayerScript =
 			},
 		},
 		{
+			Name = "GetExpertisePercent",
+			Type = "Function",
+
+			Returns =
+			{
+				{ Name = "mainhandExpertisePercent", Type = "number", Nilable = false },
+				{ Name = "offhandExpertisePercent", Type = "number", Nilable = false },
+				{ Name = "rangedExpertisePercent", Type = "number", Nilable = false },
+			},
+		},
+		{
 			Name = "GetHaste",
 			Type = "Function",
 
@@ -542,7 +545,7 @@ local PlayerScript =
 			Returns =
 			{
 				{ Name = "lifetimeHonorableKills", Type = "number", Nilable = false },
-				{ Name = "lifetimeMaxPVPRank", Type = "number", Nilable = false },
+				{ Name = "lifetimeMaxPVPRank", Type = "PvPRanks", Nilable = false },
 			},
 		},
 		{
@@ -622,6 +625,7 @@ local PlayerScript =
 		{
 			Name = "GetPlayerInfoByGUID",
 			Type = "Function",
+			MayReturnNothing = true,
 
 			Arguments =
 			{
@@ -721,6 +725,7 @@ local PlayerScript =
 		{
 			Name = "GetRestState",
 			Type = "Function",
+			MayReturnNothing = true,
 
 			Returns =
 			{
@@ -743,6 +748,7 @@ local PlayerScript =
 		{
 			Name = "GetRuneCooldown",
 			Type = "Function",
+			MayReturnNothing = true,
 
 			Arguments =
 			{
@@ -759,6 +765,7 @@ local PlayerScript =
 		{
 			Name = "GetRuneCount",
 			Type = "Function",
+			MayReturnNothing = true,
 
 			Arguments =
 			{
@@ -996,6 +1003,15 @@ local PlayerScript =
 			Returns =
 			{
 				{ Name = "newlyBoosted", Type = "bool", Nilable = false },
+			},
+		},
+		{
+			Name = "IsDrivableArea",
+			Type = "Function",
+
+			Returns =
+			{
+				{ Name = "result", Type = "bool", Nilable = false },
 			},
 		},
 		{
@@ -1245,12 +1261,15 @@ local PlayerScript =
 		{
 			Name = "PlayerEffectiveAttackPower",
 			Type = "Function",
+			MayReturnNothing = true,
 
 			Returns =
 			{
 				{ Name = "mainHandAttackPower", Type = "number", Nilable = false },
 				{ Name = "offHandAttackPower", Type = "number", Nilable = false },
 				{ Name = "rangedAttackPower", Type = "number", Nilable = false },
+				{ Name = "baseAttackPower", Type = "number", Nilable = false },
+				{ Name = "baseRangedAttackPower", Type = "number", Nilable = false },
 			},
 		},
 		{
@@ -1260,6 +1279,15 @@ local PlayerScript =
 			Returns =
 			{
 				{ Name = "timerunningSeasonID", Type = "number", Nilable = true },
+			},
+		},
+		{
+			Name = "PlayerIsInCombat",
+			Type = "Function",
+
+			Returns =
+			{
+				{ Name = "playerIsInCombat", Type = "bool", Nilable = false },
 			},
 		},
 		{
@@ -1388,15 +1416,6 @@ local PlayerScript =
 			},
 		},
 		{
-			Name = "ShowAccountAchievements",
-			Type = "Function",
-
-			Arguments =
-			{
-				{ Name = "hide", Type = "bool", Nilable = false, Default = false },
-			},
-		},
-		{
 			Name = "ShowCloak",
 			Type = "Function",
 
@@ -1435,6 +1454,7 @@ local PlayerScript =
 		{
 			Name = "SitStandOrDescendStart",
 			Type = "Function",
+			HasRestrictions = true,
 		},
 		{
 			Name = "SplashFrameCanBeShown",
@@ -1484,10 +1504,31 @@ local PlayerScript =
 
 	Events =
 	{
+		{
+			Name = "PlayerInCombatChanged",
+			Type = "Event",
+			LiteralName = "PLAYER_IN_COMBAT_CHANGED",
+			Payload =
+			{
+				{ Name = "inCombat", Type = "bool", Nilable = false },
+			},
+		},
 	},
 
 	Tables =
 	{
+		{
+			Name = "PlayerAttackPowerInfo",
+			Type = "Structure",
+			Fields =
+			{
+				{ Name = "mainHandAttackPower", Type = "number", Nilable = false },
+				{ Name = "offHandAttackPower", Type = "number", Nilable = false },
+				{ Name = "rangedAttackPower", Type = "number", Nilable = false },
+				{ Name = "baseAttackPower", Type = "number", Nilable = false },
+				{ Name = "baseRangedAttackPower", Type = "number", Nilable = false },
+			},
+		},
 	},
 };
 

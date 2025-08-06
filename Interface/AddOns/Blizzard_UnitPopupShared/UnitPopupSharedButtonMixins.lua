@@ -281,9 +281,13 @@ end
 function UnitPopupTargetButtonMixin:CanShow(contextData)
 	if not issecure() then
 		return false;
-end
+	end
 
 	if contextData.isMobile then
+		return false;
+	end
+
+	if not contextData.unit then
 		return false;
 	end
 
@@ -499,9 +503,17 @@ function UnitPopupUninviteButtonMixin:CanShow(contextData)
 	local instanceType = select(2, IsInInstance());
 	if (instanceType == "pvp") or (instanceType == "arena") then
 		return false;
-end
+	end
 
 	return not UnitPopupSharedUtil.HasLFGRestrictions();
+end
+
+function UnitPopupUninviteButtonMixin:IsEnabled(contextData)
+	if (C_PartyInfo.ChallengeModeRestrictionsActive()) then 
+		return false;
+	end
+
+	return true;
 end
 
 function UnitPopupUninviteButtonMixin:OnClick(contextData)
@@ -523,10 +535,7 @@ function UnitPopupRemoveFriendButtonMixin:GetText(contextData)
 end
 
 function UnitPopupRemoveFriendButtonMixin:OnClick(contextData)
-	local fullName = UnitPopupSharedUtil.GetFullPlayerName(contextData);
-	if not C_FriendList.RemoveFriend(fullName) then
-		UIErrorsFrame:AddExternalErrorMessage(ERR_FRIEND_NOT_FOUND);
-	end
+	StaticPopup_Show("CONFIRM_REMOVE_WOW_FRIEND", nil, nil, contextData);
 end
 
 UnitPopupSetNoteButtonMixin = CreateFromMixins(UnitPopupFriendsButtonMixin);
@@ -546,18 +555,19 @@ UnitPopupRemoveBnetFriendButtonMixin = CreateFromMixins(UnitPopupRemoveFriendBut
 function UnitPopupRemoveBnetFriendButtonMixin:OnClick(contextData)
 	local accountInfo = contextData.accountInfo;
 	local promptText;
-	if not IsOnGlueScreen() then 
+	if not C_Glue.IsOnGlueScreen() then 
 	if accountInfo then
 		if accountInfo.isBattleTagFriend then
 			promptText = string.format(BATTLETAG_REMOVE_FRIEND_CONFIRMATION, accountInfo.accountName);
 			else
 				promptText = string.format(REMOVE_FRIEND_CONFIRMATION, accountInfo.accountName);
 			end
-			StaticPopup_Show("CONFIRM_REMOVE_FRIEND", promptText, nil, accountInfo.bnetAccountID);
+			StaticPopup_Show("CONFIRM_REMOVE_BN_FRIEND", promptText, nil, accountInfo.bnetAccountID);
 		end
 	else
 		promptText = string.format(BATTLETAG_REMOVE_FRIEND_CONFIRMATION, contextData.battleTag);
-		GlueDialog_Show("CONFIRM_REMOVE_FRIEND", promptText, contextData.bnetIDAccount);
+		local text2 = nil;
+		StaticPopup_Show("CONFIRM_REMOVE_BN_FRIEND", promptText, text2, contextData.bnetIDAccount);
 	end
 
 
@@ -829,13 +839,13 @@ function UnitPopupGuildPromoteButtonMixin:CanShow(contextData)
 		return false;
 	end
 
-	return contextData.name ~= UnitNameUnmodified("player");
+	local playerName, playerServer = UnitFullName("player");
+	return playerName ~= contextData.name or playerServer ~= contextData.server;
 end
 
 function UnitPopupGuildPromoteButtonMixin:OnClick(contextData)
 	local fullName = UnitPopupSharedUtil.GetFullPlayerName(contextData);
-	local dialog = StaticPopup_Show("CONFIRM_GUILD_PROMOTE", fullName);
-	dialog.data = fullName;
+	StaticPopup_Show("CONFIRM_GUILD_PROMOTE", fullName, nil, fullName);
 end
 
 --Shown through Communities Guild Roster right click
@@ -914,6 +924,24 @@ function UnitPopupPartyInstanceLeaveButtonMixin:OnClick(contextData)
 	ConfirmOrLeaveParty();
 end
 
+UnitPopupPartyInstanceAbandonButtonMixin = CreateFromMixins(UnitPopupButtonBaseMixin);
+
+function UnitPopupPartyInstanceAbandonButtonMixin:GetText(contextData)
+	return VOTE_TO_ABANDON;
+end
+
+function UnitPopupPartyInstanceAbandonButtonMixin:CanShow(contextData)
+	return C_PartyInfo.ChallengeModeRestrictionsActive();
+end
+
+function UnitPopupPartyInstanceAbandonButtonMixin:IsEnabled(contextData)
+	return C_PartyInfo.CanStartInstanceAbandonVote();
+end
+
+function UnitPopupPartyInstanceAbandonButtonMixin:OnClick(contextData)
+	C_PartyInfo.StartInstanceAbandonVote();
+end
+
 UnitPopupFollowButtonMixin = CreateFromMixins(UnitPopupButtonBaseMixin);
 
 function UnitPopupFollowButtonMixin:GetText(contextData)
@@ -948,7 +976,7 @@ function UnitPopupPetDismissButtonMixin:GetText(contextData)
 end
 
 function UnitPopupPetDismissButtonMixin:CanShow(contextData)
-	if PetCanBeAbandoned() and not IsSpellKnown(HUNTER_DISMISS_PET) then
+	if PetCanBeAbandoned() and not C_SpellBook.IsSpellKnown(Constants.SpellBookSpellIDs.SPELL_ID_DISMISS_PET) then
 		return false;
 	end
 
@@ -957,7 +985,7 @@ end
 
 function UnitPopupPetDismissButtonMixin:OnClick(contextData)
 	if PetCanBeAbandoned() then
-		CastSpellByID(HUNTER_DISMISS_PET);
+		CastSpellByID(Constants.SpellBookSpellIDs.SPELL_ID_DISMISS_PET);
 	else
 		PetDismiss();
 	end
@@ -1066,7 +1094,7 @@ function UnitPopupResetChallengeModeButtonMixin:CanShow(contextData)
 		return false;
 	end
 
-	if not C_ChallengeMode.IsChallengeModeActive() then
+	if not C_ChallengeMode.IsChallengeModeResettable() then
 		return false;
 	end
 
@@ -1078,6 +1106,10 @@ function UnitPopupResetChallengeModeButtonMixin:CanShow(contextData)
 end
 
 function UnitPopupResetChallengeModeButtonMixin:IsEnabled(contextData)
+	if not C_ChallengeMode.GetActiveKeystoneInfo then
+		return true;
+	end
+
 	local energized = select(3, C_ChallengeMode.GetActiveKeystoneInfo());
 	return not energized;
 end
@@ -1400,20 +1432,8 @@ function UnitPopupDungeonDifficulty1ButtonMixin:isDisabled(contextData)
 end
 
 function UnitPopupDungeonDifficulty1ButtonMixin:IsEnabled(contextData)
-	local inInstance, instanceType = IsInInstance();
-	if inInstance then
-	return false;
-end
-
-	if instanceType == "raid" then
-		return false;
-	end
-
-	if IsInGroup() and not UnitIsGroupLeader("player") then
-		return false;
-	end
-
-	return not UnitPopupSharedUtil.HasLFGRestrictions();
+	local difficultyID = self:GetDifficultyID();
+	return DifficultyUtil.IsDungeonDifficultyEnabled(difficultyID);
 end
 
 UnitPopupDungeonDifficulty2ButtonMixin = CreateFromMixins(UnitPopupDungeonDifficulty1ButtonMixin);
@@ -1424,6 +1444,16 @@ end
 
 function UnitPopupDungeonDifficulty2ButtonMixin:GetDifficultyID()
 	return 2;
+end
+
+UnitPopupDungeonDifficulty3ButtonMixin = CreateFromMixins(UnitPopupDungeonDifficulty1ButtonMixin);
+
+function UnitPopupDungeonDifficulty3ButtonMixin:GetText(contextData)
+	return PLAYER_DIFFICULTY5;
+end
+
+function UnitPopupDungeonDifficulty3ButtonMixin:GetDifficultyID()
+	return 8;
 end
 
 -- Raid Difficulty Buttons
@@ -1691,7 +1721,7 @@ function UnitPopupSelectLootSpecializationButtonMixin:GetTooltipText()
 end
 
 function UnitPopupSelectLootSpecializationButtonMixin:CanShow(contextData)
-	return GetSpecialization();
+	return HasLootSpecializations() and C_SpecializationInfo.GetSpecialization();
 end
 
 function UnitPopupSelectLootSpecializationButtonMixin:GetEntries()
@@ -1708,11 +1738,11 @@ end
 UnitPopupLootSpecializationDefaultButtonMixin = CreateFromMixins(UnitPopupRadioButtonMixin);
 
 function UnitPopupLootSpecializationDefaultButtonMixin:GetText(contextData)
-	local specIndex = GetSpecialization();
+	local specIndex = C_SpecializationInfo.GetSpecialization();
 	if specIndex then
 	local sex = UnitSex("player");
-		local isInspect, isPet, inspectTarget = false, false, false;
-		local specID, specName = GetSpecializationInfo(specIndex, isInspect, isPet, inspectTarget, sex);
+		local isInspect, isPet, inspectTarget = false, false, nil;
+		local specID, specName = C_SpecializationInfo.GetSpecializationInfo(specIndex, isInspect, isPet, inspectTarget, sex);
 		if specName then
 			return format(LOOT_SPECIALIZATION_DEFAULT, specName);
 		end
@@ -1739,8 +1769,8 @@ function UnitPopupLootSpecialization1ButtonMixin:GetText(contextData)
 	local specIndex = self:GetSpecIndex();
 	if specIndex then
 	local sex = UnitSex("player");
-		local isInspect, isPet, inspectTarget = false, false, false;
-		local specID, specName = GetSpecializationInfo(specIndex, isInspect, isPet, inspectTarget, sex);
+		local isInspect, isPet, inspectTarget = false, false, nil;
+		local specID, specName = C_SpecializationInfo.GetSpecializationInfo(specIndex, isInspect, isPet, inspectTarget, sex);
 		if specName then
 			return specName;
 		end
@@ -1755,9 +1785,9 @@ end
 function UnitPopupLootSpecialization1ButtonMixin:GetSpecID()
 	local specIndex = self:GetSpecIndex();
 	local sex = UnitSex("player");
-	local isInspect, isPet, inspectTarget = false, false, false;
-	local specID = GetSpecializationInfo(specIndex, isInspect, isPet, inspectTarget, sex);
-	return specID or -1;
+	local isInspect, isPet, inspectTarget = false, false, nil;
+	local specID = C_SpecializationInfo.GetSpecializationInfo(specIndex, isInspect, isPet, inspectTarget, sex);
+	return specID or 0;
 end
 
 function UnitPopupLootSpecialization1ButtonMixin:IsChecked(contextData)
@@ -1765,7 +1795,7 @@ function UnitPopupLootSpecialization1ButtonMixin:IsChecked(contextData)
 end
 
 function UnitPopupLootSpecialization1ButtonMixin:CanShow(contextData)
-	return self:GetSpecID() > -1;
+	return self:GetSpecID() > 0;
 end
 
 function UnitPopupLootSpecialization1ButtonMixin:OnClick(contextData)
@@ -2753,7 +2783,6 @@ end
 function UnitPopupSelfHighlightSelectButtonMixin:GetEntries()
 	return {
 		UnitPopupSelfHighlightCircleButtonMixin,
-		UnitPopupSelfHighlightOutlineButtonMixin,
 		UnitPopupSelfHighlightIconButtonMixin,
 	};
 end
@@ -2762,7 +2791,6 @@ UnitPopupSelfHighlightCommonMixin = CreateFromMixins(UnitPopupCheckboxButtonMixi
 
 function UnitPopupSelfHighlightCommonMixin:SetFindSelfAnywhere()
 	local shouldFindSelfAnywhere = GetCVarBool("findYourselfModeCircle") or
-		GetCVarBool("findYourselfModeOutline") or
 		GetCVarBool("findYourselfModeIcon");
 			
 	SetCVar("findYourselfAnywhere", shouldFindSelfAnywhere);
@@ -2795,16 +2823,6 @@ function UnitPopupSelfHighlightCircleButtonMixin:GetCVarName()
 	return "findYourselfModeCircle";
 end
 
-UnitPopupSelfHighlightOutlineButtonMixin = CreateFromMixins(UnitPopupSelfHighlightCommonMixin);
-
-function UnitPopupSelfHighlightOutlineButtonMixin:GetText(contextData)
-	return SELF_HIGHLIGHT_OUTLINE;
-end
-
-function UnitPopupSelfHighlightOutlineButtonMixin:GetCVarName()
-	return "findYourselfModeOutline";
-end
-
 UnitPopupSelfHighlightIconButtonMixin = CreateFromMixins(UnitPopupSelfHighlightCommonMixin);
 
 function UnitPopupSelfHighlightIconButtonMixin:GetText(contextData)
@@ -2835,12 +2853,15 @@ function UnitPopupChatPromoteButtonMixin:CanShow(contextData)
 	end
 
 	-- TODO: Name matching is wrong here, needs full name comparison
-	return contextData.name == UnitNameUnmodified("player");
+	if contextData.name == UnitNameUnmodified("player") then
+		return false;
+	end
+
+	return true;
 end
 
-UnitPopupChatPromoteButtonMixin = CreateFromMixins(UnitPopupButtonBaseMixin);
-function UnitPopupChatPromoteButtonMixin:GetText(contextData)
-	return MAKE_MODERATOR;
+function UnitPopupChatPromoteButtonMixin:OnClick(contextData)
+	ChannelModerator(contextData.channelName, contextData.name)
 end
 
 UnitPopupChatDemoteButtonMixin = CreateFromMixins(UnitPopupButtonBaseMixin);
@@ -2861,9 +2882,13 @@ function UnitPopupChatDemoteButtonMixin:CanShow(contextData)
 	if not IsDisplayChannelOwner() then
 		return false;
 	end
-
+	
 	-- TODO: Name matching is wrong here, needs full name comparison
-	return contextData.name ~= UnitNameUnmodified("player");
+	if contextData.name == UnitNameUnmodified("player") then
+		return false;
+	end
+
+	return true;
 end
 
 function UnitPopupChatDemoteButtonMixin:OnClick(contextData)
@@ -3359,9 +3384,9 @@ function UnitPopupItemQuality2DescButtonMixin:GetText(contextData)
 end
 
 function UnitPopupItemQuality2DescButtonMixin:GetColor()
-	local itemQualityColor = ITEM_QUALITY_COLORS[self:GetID()];
-	if itemQualityColor then
-		return itemQualityColor.color:GetRGB();
+	local colorData = ColorManager.GetColorDataForItemQuality(self:GetID());
+	if colorData then
+		return colorData.color:GetRGB();
 	end
 	return 1, 1, 1;
 end
@@ -3541,9 +3566,28 @@ function UnitPopupSelectRoleButtonMixin:GetText(contextData)
 	return SET_ROLE; 
 end 
 
---Override in UnitPopupButtons
 function UnitPopupSelectRoleButtonMixin:CanShow(contextData)
-	return false; 
+	if not CanShowSetRoleButton() then
+		return false;
+	end
+
+	if C_Scenario.IsInScenario() then
+		return false;
+	end
+
+	if not IsInGroup() then
+		return false; 
+	end
+
+	if HasLFGRestrictions() then
+		return false;
+	end
+
+	if UnitInPartyIsAI(contextData.unit) then
+		return false;
+	end
+
+	return UnitIsGroupLeader("player") or UnitIsGroupAssistant("player") or UnitIsUnit(contextData.unit, "player");
 end
 
 function UnitPopupSelectRoleButtonMixin:GetEntries()
@@ -3567,7 +3611,7 @@ function UnitPopupSetRoleNoneButton:GetTextHeight()
 end
 
 function UnitPopupSetRoleNoneButton:GetRole()
-	return nill;
+	return nil;
 end
 
 function UnitPopupSetRoleNoneButton:OnClick(contextData)
@@ -3590,6 +3634,10 @@ function UnitPopupSetRoleTankButton:GetRole()
 end
 
 function UnitPopupSetRoleTankButton:IsEnabled(contextData)
+	if (AreClassRolesSoftSuggestions()) then
+		return true;
+	end
+
 	local canBeTank, canBeHealer, canBeDamager = UnitGetAvailableRoles(contextData.unit);
 	return canBeTank;
 end
@@ -3605,6 +3653,10 @@ function UnitPopupSetRoleDpsButton:GetRole()
 end
 
 function UnitPopupSetRoleDpsButton:IsEnabled(contextData)
+	if (AreClassRolesSoftSuggestions()) then
+		return true;
+	end
+
 	local canBeTank, canBeHealer, canBeDamager = UnitGetAvailableRoles(contextData.unit);
 	return canBeDamager;
 end
@@ -3620,6 +3672,24 @@ function UnitPopupSetRoleHealerButton:GetRole()
 end
 
 function UnitPopupSetRoleHealerButton:IsEnabled(contextData)
+	if (AreClassRolesSoftSuggestions()) then
+		return true;
+	end
+
 	local canBeTank, canBeHealer, canBeDamager = UnitGetAvailableRoles(contextData.unit);
 	return canBeHealer;
+end
+
+UnitPopupResetChallengeButtonMixin = CreateFromMixins(UnitPopupButtonBaseMixin);
+
+function UnitPopupResetChallengeButtonMixin:GetText(contextData)
+	return RESET_CHALLENGE_MODE;
+end
+
+function UnitPopupResetChallengeButtonMixin:OnClick(contextData)
+	C_ChallengeMode.Reset();
+end
+
+function UnitPopupResetChallengeButtonMixin:CanShow(contextData)
+	return C_ChallengeMode.IsChallengeModeActive();
 end

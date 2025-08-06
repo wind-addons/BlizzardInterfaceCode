@@ -183,6 +183,10 @@ function TalentDisplayMixin:GetSpellID()
 	return (self.definitionInfo ~= nil) and self.definitionInfo.spellID or nil;
 end
 
+function TalentDisplayMixin:GetOverriddenSpellID()
+	return (self.definitionInfo ~= nil) and self.definitionInfo.overriddenSpellID or nil;
+end
+
 function TalentDisplayMixin:GetOverrideIcon()
 	return (self.definitionInfo ~= nil) and self.definitionInfo.overrideIcon or nil;
 end
@@ -1333,6 +1337,10 @@ function TalentButtonSelectMixin:OnClick(button)
 		return;
 	end
 
+	if self:IsLocked() then
+		return;
+	end
+
 	if button == "RightButton" then
 		if self:IsGhosted() then
 			self:ClearCascadeRepurchaseHistory();
@@ -1396,8 +1404,14 @@ function TalentButtonSelectMixin:AddTooltipCost(tooltip)
 	-- Override TalentButtonBaseMixin.
 end
 
-function TalentButtonSelectMixin:AddTooltipErrors(unused_tooltip)
+function TalentButtonSelectMixin:AddTooltipErrors(tooltip)
 	-- Overrides TalentDisplayMixin.
+
+	local isLocked, errorMessage = self:GetTalentFrame():IsLocked();
+	if isLocked and errorMessage then
+		GameTooltip_AddBlankLineToTooltip(tooltip);
+		GameTooltip_AddErrorLine(tooltip, errorMessage);
+	end
 end
 
 function TalentButtonSelectMixin:UpdateNodeInfo(skipUpdate)
@@ -1532,7 +1546,6 @@ function TalentButtonSelectMixin:UpdateIconTexture()
 	if self:HasSelectedEntryID() then
 		TalentDisplayMixin.UpdateIconTexture(self);
 	else
-		-- TODO:: Better empty state.
 		self.Icon:SetTexture([[Interface\Icons\INV_Misc_QuestionMark]]);
 	end
 end

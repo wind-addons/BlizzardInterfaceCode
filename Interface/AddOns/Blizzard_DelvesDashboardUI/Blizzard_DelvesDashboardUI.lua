@@ -185,8 +185,6 @@ function ReputationThresholdMixin:Setup(thresholdInfo, renownInfo, thresholdLeve
 			self.LineIncomplete:Hide();
 			self.LineComplete:Show();
 			self.Reward.IconBorder:SetAtlas("delves-dashboard-bar-diamond-complete");
-		else
-			self.Reward.IconBorder:SetAtlas("delves-dashboard-bar-reward-border");
 		end
 
 		local oldThresholdValue = math.floor(GetCVarNumberOrDefault(DELVES_SEASON_RENOWN_CVAR));
@@ -208,15 +206,13 @@ function ReputationThresholdMixin:Setup(thresholdInfo, renownInfo, thresholdLeve
 			self.Reward.EarnedCheckmark:SetAlpha(1);
 		end
 	else
-		self.Reward.IconBorder:SetDesaturated(true);
 		if not isFinalReward then
+			self.Reward.IconBorder:SetDesaturated(true);
 			self.LineIncomplete:Show();
 			self.LineComplete:Hide();
 			self.Reward.IconBorder:SetAtlas("delves-dashboard-bar-diamond-incomplete");
-		else
-			self.Reward.IconBorder:SetAtlas("delves-dashboard-bar-reward-border-disabled");
+			self.Reward.Icon:SetDesaturated(true);
 		end
-		self.Reward.Icon:SetDesaturated(true);
 		self.Reward.Glow:SetAlpha(0);
 		self.Reward.EarnedCheckmark:SetAlpha(0);
 	end
@@ -235,14 +231,17 @@ end
 CompanionConfigButtonPanelMixin = {};
 
 function CompanionConfigButtonPanelMixin:OnShow()
-	--! TODO BRANN_COMPANION_INFO_ID to be replaced with other data source in the future, keeping it explicit for now
-	local traitTreeID = C_DelvesUI.GetTraitTreeForCompanion(Constants.DelvesConsts.BRANN_COMPANION_INFO_ID);
-	local companionFactionID = C_DelvesUI.GetFactionForCompanion(Constants.DelvesConsts.BRANN_COMPANION_INFO_ID);
+	local traitTreeID = C_DelvesUI.GetTraitTreeForCompanion();
+	local companionFactionID = C_DelvesUI.GetFactionForCompanion();
 
     local companionFactionInfo = C_Reputation.GetFactionDataByID(companionFactionID);
-
-    self.PanelTitle:SetText(companionFactionInfo.name);
-    self.PanelDescription:SetText(DELVES_COMPANION_LABEL);
+	if companionFactionInfo then
+		self.PanelTitle:SetText(companionFactionInfo.name);
+		self.PanelDescription:SetText(DELVES_COMPANION_LABEL);
+	else
+		self.PanelTitle:SetText(DELVES_COMPANION_LABEL);
+		self.PanelDescription:SetText("");
+	end
 
 	if not C_Traits.GetConfigIDByTreeID(traitTreeID) then
 		self.CompanionConfigButton.disabled = true;
@@ -292,8 +291,7 @@ function CompanionConfigButtonPanelModelSceneMixin:OnShow()
 		actor:Hide();
 		actor:SetOnModelLoadedCallback(GenerateClosure(self.OnModelLoaded, actor));
 
-		--! TODO BRANN_COMPANION_INFO_ID to be replaced with other data source in the future, keeping it explicit for now
-		actor:SetModelByCreatureDisplayID(C_DelvesUI.GetCreatureDisplayInfoForCompanion(Constants.DelvesConsts.BRANN_COMPANION_INFO_ID));
+		actor:SetModelByCreatureDisplayID(C_DelvesUI.GetCreatureDisplayInfoForCompanion());
 	end
 end
 
@@ -429,6 +427,46 @@ end
 
 function DelvesDashboardButtonPanelFrameMixin:OnLeave()
 	if GameTooltip:GetOwner() == self.PanelDescription then
+		GameTooltip:Hide();
+	end
+end
+
+DelvesThresholdBarMixin = {};
+
+function DelvesThresholdBarMixin:OnEnter()
+	local renownInfo = self:GetParent().renownInfo;
+
+	if renownInfo then
+		local earnedLevels = math.floor(GetCVarNumberOrDefault(DELVES_SEASON_RENOWN_CVAR));
+		local cumulativeRepEarned = (earnedLevels * renownInfo.renownLevelThreshold) + renownInfo.renownReputationEarned;
+		local maxRepForTrack = renownInfo.renownLevelThreshold * MAX_NUM_REWARDS;
+
+		local cumulativeRepEarnedFmt = FormatLargeNumber(cumulativeRepEarned);
+		local maxRepForTrackFmt = FormatLargeNumber(maxRepForTrack);
+		local repToNextRewardFmt = FormatLargeNumber(renownInfo.renownLevelThreshold - renownInfo.renownReputationEarned);
+
+		if cumulativeRepEarned > maxRepForTrack then
+			cumulativeRepEarnedFmt = maxRepForTrackFmt;
+		end
+
+		if C_MajorFactions.HasMaximumRenown(C_DelvesUI.GetDelvesFactionForSeason()) then
+			repToNextRewardFmt = nil;
+		end
+
+		GameTooltip:SetOwner(self, "ANCHOR_CURSOR_RIGHT");
+		GameTooltip:SetMinimumWidth(235);
+		GameTooltip_AddHighlightLine(GameTooltip, DELVES_SEASON_PROGRESS:format(cumulativeRepEarnedFmt, maxRepForTrackFmt));
+		if repToNextRewardFmt then 
+			GameTooltip_AddHighlightLine(GameTooltip, DELVES_SEASON_REWARD_PROGRESS:format(repToNextRewardFmt));
+		end
+		GameTooltip_AddNormalLine(GameTooltip, DELVES_JOURNEY_TIP);
+		GameTooltip:Show();
+	end
+end
+
+function DelvesThresholdBarMixin:OnLeave()
+	if GameTooltip:GetOwner() == self then
+		GameTooltip:SetMinimumWidth(0, false);
 		GameTooltip:Hide();
 	end
 end

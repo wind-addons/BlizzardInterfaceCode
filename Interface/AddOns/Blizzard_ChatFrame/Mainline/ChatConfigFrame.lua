@@ -8,7 +8,7 @@ CHATCONFIG_CHANNELS_MAXWIDTH = 145;
 CHAT_CONFIG_CURRENT_COLOR_SWATCH = nil;
 
 local function ShouldDisplayDisabled()
-	return not C_SocialRestrictions.IsMuted() and C_SocialRestrictions.IsChatDisabled();
+	return not C_SocialRestrictions.CanReceiveChat();
 end
 
 --Chat options
@@ -120,7 +120,7 @@ do
 			text = VOICE_CHAT_TRANSCRIPTION,
 			type = "VOICE_TEXT",
 			checked = function () return IsListeningForMessageType("VOICE_TEXT"); end;
-			func = function (self, checked) 
+			func = function (self, checked)
 				ToggleChatMessageGroup(checked, "VOICE_TEXT");
 				local chatFrame = FCF_GetCurrentChatFrame();
 				if ( checked ) then
@@ -752,7 +752,7 @@ end
 function ChatConfigFrame_OnEvent(self, event, ...)
 	if ( event == "PLAYER_ENTERING_WORLD" ) then
 		-- Chat Settings
-		ChatConfigFrame_ReplaceChatConfigLeftTooltips(C_SocialRestrictions.IsChatDisabled());
+		ChatConfigFrame_ReplaceChatConfigLeftTooltips(ShouldDisplayDisabled());
 		ChatConfig_CreateCheckboxes(ChatConfigChatSettingsLeft, CHAT_CONFIG_CHAT_LEFT, "ChatConfigWideCheckboxWithSwatchTemplate", PLAYER_MESSAGES);
 		ChatConfig_CreateCheckboxes(ChatConfigOtherSettingsCombat, CHAT_CONFIG_OTHER_COMBAT, "ChatConfigCheckboxWithSwatchTemplate", COMBAT);
 		ChatConfig_CreateCheckboxes(ChatConfigOtherSettingsPVP, CHAT_CONFIG_OTHER_PVP, "ChatConfigCheckboxWithSwatchTemplate", PVP);
@@ -1542,7 +1542,7 @@ CHAT_CONFIG_CATEGORIES = {
 	[3] = "ChatConfigChannelSettings",
 	[4] = "ChatConfigOtherSettings",
 	[5] = "ChatConfigTextToSpeechSettings",
-	[6] = "ChatConfigTextToSpeechMessageSettings",
+	[6] = "ChatConfigTextToSpeechMessageSettingsScroll",
 	[7] = "ChatConfigTextToSpeechChannelSettings",
 };
 
@@ -1648,7 +1648,7 @@ function CreateChatTextToSpeechChannelList(self, ...)
 		if C_ChatInfo.IsChannelRegional(channelID) then
 			disabled = disabled or not C_ChatInfo.IsRegionalServiceAvailable();
 		end
-		
+
 		local channelInfo = C_ChatInfo.GetChannelInfoFromIdentifier(channel);
 		local checked = C_TTSSettings.GetChannelEnabled(channelInfo);
 
@@ -1705,7 +1705,7 @@ function ChatConfigCombat_OnLoad(self)
 			PanelTemplates_TabResize(tab, 0);
 		end
 	end
-	
+
 	-- Update tab widths when scale changes
 	self:RegisterEvent("UI_SCALE_CHANGED");
 
@@ -2061,6 +2061,13 @@ function CanCreateFilters()
 	return true;
 end
 
+function ChatConfigBaseCheckButton_MouseUp()
+	if ShouldDisplayDisabled() and IsShiftKeyDown() then
+		PlaySound(SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_ON);
+		Settings.OpenToCategory(Settings.SOCIAL_CATEGORY_ID);
+	end
+end
+
 function ChatConfigFrame_PlayCheckboxSound (checked)
 	if ( checked ) then
 		PlaySound(SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_ON);
@@ -2095,12 +2102,12 @@ function ChatConfigCategoryFrame_Refresh(preserveCategorySelection)
 		ChatConfigCategory_OnClick(ChatConfigCategoryFrameButton5);
 	elseif ( currentChatFrame ~= nil and IsCombatLog(currentChatFrame) ) then
 		ChatConfigCategory_OnClick(ChatConfigCategoryFrameButton2);
-	elseif ( 
-		not preserveCategorySelection 
-		or _G[CHAT_CONFIG_CATEGORIES[2]]:IsShown() 
-		or _G[CHAT_CONFIG_CATEGORIES[5]]:IsShown() 
-		or _G[CHAT_CONFIG_CATEGORIES[6]]:IsShown() 
-		or _G[CHAT_CONFIG_CATEGORIES[7]]:IsShown() 
+	elseif (
+		not preserveCategorySelection
+		or _G[CHAT_CONFIG_CATEGORIES[2]]:IsShown()
+		or _G[CHAT_CONFIG_CATEGORIES[5]]:IsShown()
+		or _G[CHAT_CONFIG_CATEGORIES[6]]:IsShown()
+		or _G[CHAT_CONFIG_CATEGORIES[7]]:IsShown()
 	) then
 		ChatConfigCategory_OnClick(ChatConfigCategoryFrameButton1);
 	end
@@ -2217,7 +2224,7 @@ end
 function ChatConfigFrame_OnChatDisabledChanged(disabled)
 	ChatConfigFrame_ReplaceChatConfigLeftTooltips(disabled);
 	ChatConfig_UpdateCheckboxes(ChatConfigChatSettingsLeft);
-	
+
 	if disabled then
 		local unsubscribe = true;
 		C_Club.UnfocusAllStreams(unsubscribe);
@@ -2284,7 +2291,7 @@ function ChatConfigFrameTabManagerMixin:UpdateTabDisplay()
 	local tabCount = FCF_GetNumActiveChatFrames();
 
 	local voiceChatShown = (GetCVarBool("speechToText") and C_VoiceChat.IsTranscribing()) or C_VoiceChat.IsSpeakForMeActive();
-	
+
 	--This is needed to properly skip or include the TTS config tab
 	local showTTSConfigTab = GetCVarBool("textToSpeech") or GetCVarBool("remoteTextToSpeech") or voiceChatShown;
 	if ( GetCVarBool("textToSpeech") and not GetCVarBool("remoteTextToSpeech") ) then
@@ -2480,7 +2487,7 @@ end
 function ChatConfigWideCheckboxMixin:GetChannelDisabled()
 	local channelIndex = self:GetID();
 	local channelData = CHAT_CONFIG_CHANNEL_LIST[channelIndex];
-	if not channelData then 
+	if not channelData then
 		return false;
 	end
 	return type(channelData.disabled) == "function" and channelData.disabled() or channelData.disabled;
@@ -2536,7 +2543,7 @@ function TextToSpeechCharacterSpecificButtonMixin:OnClick(button, down)
 	else
 		PlaySound(SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_OFF);
 	end
-	
+
 	SetCVar("TTSUseCharacterSettings", checked);
 	TextToSpeechFrame_Update(TextToSpeechFrame);
 end

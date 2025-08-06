@@ -14,8 +14,6 @@ GARRISON_ALERT_CONTEXT_MISSION = {
 	[Enum.GarrisonFollowerType.FollowerType_6_0_Boat] = 4,
 	[Enum.GarrisonFollowerType.FollowerType_7_0_GarrisonFollower] = 5,
 	[Enum.GarrisonFollowerType.FollowerType_8_0_GarrisonFollower] = 6,
-
-	-- TODO:: Replace with the correct flash.
 	[Enum.GarrisonFollowerType.FollowerType_9_0_GarrisonFollower] = 6,
 };
 GARRISON_ALERT_CONTEXT_INVASION = 3;
@@ -58,11 +56,12 @@ local LOW_PRIORITY_TRACKING_SPELLS = {
 };
 
 local TRACKING_SPELL_OVERRIDE_ATLAS = {
-	[43308] = "professions_tracking_fish";-- Find Fish
-	[2580] = "professions_tracking_ore"; -- Find Minerals 1
-	[8388] = "professions_tracking_ore"; -- Find Minerals 2
-	[2383] = "professions_tracking_herb"; -- Find Herbs 1
-	[8387] = "professions_tracking_herb"; -- Find Herbs 2
+	[43308] = "professions_tracking_fish", -- Find Fish
+	[2580] = "professions_tracking_ore", -- Find Minerals 1
+	[8388] = "professions_tracking_ore", -- Find Minerals 2
+	[2383] = "professions_tracking_herb", -- Find Herbs 1
+	[8387] = "professions_tracking_herb", -- Find Herbs 2
+	[122026] = "WildBattlePetCapturable", -- Track Pets
 };
 
 -- Some tracking states require spell casts to complete before the
@@ -738,7 +737,7 @@ function MiniMapTrackingButtonMixin:OnEvent(event, ...)
 	if event == "CVAR_UPDATE" or event == "VARIABLES_LOADED" or event == "SPELLS_CHANGED" then		
 		if event == "CVAR_UPDATE" then
 			local cvarName, value = ...;
-			local isMinimapTrackingCVar = (cvarName == "minimapTrackedInfov3");
+			local isMinimapTrackingCVar = (cvarName == "minimapTrackedInfov4");
 			if not isMinimapTrackingCVar then
 				return;
 			end
@@ -822,18 +821,22 @@ function ExpansionLandingPageMinimapButtonMixin:IsExpansionOverlayMode()
 	return self.mode == ExpansionLandingPageMode.ExpansionOverlay;
 end
 
-function ExpansionLandingPageMinimapButtonMixin:RefreshButton(forceUpdateIcon)
-	local previousMode = self.mode;
-	local wasInGarrisonMode = self:IsInGarrisonMode();
+function ExpansionLandingPageMinimapButtonMixin:SetBestLandingPageMode()
 	if C_GameRules.IsGameRuleActive(Enum.GameRule.LandingPageFactionID) then
 		self.mode = ExpansionLandingPageMode.MajorFactionRenown;
 		self.majorFactionID = C_GameRules.GetGameRuleAsFloat(Enum.GameRule.LandingPageFactionID);
 	elseif ExpansionLandingPage:IsOverlayApplied() then
 		self.mode = ExpansionLandingPageMode.ExpansionOverlay;
-	else
-		self.mode = nil;
+	elseif not self:IsInGarrisonMode() then
+		self.mode = ExpansionLandingPageMode.Garrison;
+		FrameUtil.RegisterFrameForEvents(self, GarrisonLandingPageEvents);
 	end
+end
 
+function ExpansionLandingPageMinimapButtonMixin:RefreshButton(forceUpdateIcon)
+	local previousMode = self.mode;
+	local wasInGarrisonMode = self:IsInGarrisonMode();
+	self:SetBestLandingPageMode();
 	if wasInGarrisonMode and not self:IsInGarrisonMode() then
 			if (GarrisonLandingPage and GarrisonLandingPage:IsShown()) then
 				HideUIPanel(GarrisonLandingPage);
@@ -844,11 +847,12 @@ function ExpansionLandingPageMinimapButtonMixin:RefreshButton(forceUpdateIcon)
 
 	if self.mode ~= previousMode or forceUpdateIcon == true then
 		self:Hide();
-
-		if self.mode then
-			self:UpdateIcon();
-			self:Show();
+		if self:IsInGarrisonMode() and not C_Garrison.IsLandingPageMinimapButtonVisible(C_Garrison.GetLandingPageGarrisonType()) then
+			return;
 		end
+
+		self:UpdateIcon();
+		self:Show();
 	end
 end
 
@@ -953,7 +957,7 @@ function ExpansionLandingPageMinimapButtonMixin:SetTooltip()
 	GameTooltip:SetOwner(self, "ANCHOR_LEFT");
 
 	if self:IsInMajorFactionRenownMode() then
-		RenownRewardUtil.AddMajorFactionToTooltip(GameTooltip, self.majorFactionID, GenerateClosure(self.SetTooltip, self));
+		RenownRewardUtil.AddMajorFactionLandingPageSummaryToTooltip(GameTooltip, self.majorFactionID, GenerateClosure(self.SetTooltip, self));
 	else
 		GameTooltip:SetText(self.title, 1, 1, 1);
 		GameTooltip:AddLine(self.description, nil, nil, nil, true);

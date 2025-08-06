@@ -83,6 +83,7 @@ local EncounterJournal =
 		{
 			Name = "GetLootInfoByIndex",
 			Type = "Function",
+			MayReturnNothing = true,
 
 			Arguments =
 			{
@@ -113,6 +114,7 @@ local EncounterJournal =
 		{
 			Name = "GetSectionInfo",
 			Type = "Function",
+			MayReturnNothing = true,
 
 			Arguments =
 			{
@@ -168,10 +170,12 @@ local EncounterJournal =
 		{
 			Name = "OnClose",
 			Type = "Function",
+			HasRestrictions = true,
 		},
 		{
 			Name = "OnOpen",
 			Type = "Function",
+			HasRestrictions = true,
 		},
 		{
 			Name = "ResetSlotFilter",
@@ -207,6 +211,7 @@ local EncounterJournal =
 		{
 			Name = "SetTab",
 			Type = "Function",
+			HasRestrictions = true,
 
 			Arguments =
 			{

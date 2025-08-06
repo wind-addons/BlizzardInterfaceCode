@@ -44,6 +44,20 @@ local UIWidgetManager =
 			},
 		},
 		{
+			Name = "GetButtonHeaderWidgetVisualizationInfo",
+			Type = "Function",
+
+			Arguments =
+			{
+				{ Name = "widgetID", Type = "number", Nilable = false },
+			},
+
+			Returns =
+			{
+				{ Name = "widgetInfo", Type = "ButtonHeaderWidgetVisualizationInfo", Nilable = true },
+			},
+		},
+		{
 			Name = "GetCaptureBarWidgetVisualizationInfo",
 			Type = "Function",
 
@@ -465,6 +479,7 @@ local UIWidgetManager =
 		{
 			Name = "GetWidgetSetInfo",
 			Type = "Function",
+			MayReturnNothing = true,
 
 			Arguments =
 			{
@@ -563,6 +578,18 @@ local UIWidgetManager =
 			},
 		},
 		{
+			Name = "IconAndTextShiftTextType",
+			Type = "Enumeration",
+			NumValues = 2,
+			MinValue = 0,
+			MaxValue = 1,
+			Fields =
+			{
+				{ Name = "None", Type = "IconAndTextShiftTextType", EnumValue = 0 },
+				{ Name = "ShiftText", Type = "IconAndTextShiftTextType", EnumValue = 1 },
+			},
+		},
+		{
 			Name = "IconAndTextWidgetState",
 			Type = "Enumeration",
 			NumValues = 4,
@@ -625,25 +652,6 @@ local UIWidgetManager =
 			{
 				{ Name = "None", Type = "MapPinAnimationType", EnumValue = 0 },
 				{ Name = "Pulse", Type = "MapPinAnimationType", EnumValue = 1 },
-			},
-		},
-		{
-			Name = "SpellDisplayBorderColor",
-			Type = "Enumeration",
-			NumValues = 9,
-			MinValue = 0,
-			MaxValue = 8,
-			Fields =
-			{
-				{ Name = "None", Type = "SpellDisplayBorderColor", EnumValue = 0 },
-				{ Name = "Black", Type = "SpellDisplayBorderColor", EnumValue = 1 },
-				{ Name = "White", Type = "SpellDisplayBorderColor", EnumValue = 2 },
-				{ Name = "Red", Type = "SpellDisplayBorderColor", EnumValue = 3 },
-				{ Name = "Yellow", Type = "SpellDisplayBorderColor", EnumValue = 4 },
-				{ Name = "Orange", Type = "SpellDisplayBorderColor", EnumValue = 5 },
-				{ Name = "Purple", Type = "SpellDisplayBorderColor", EnumValue = 6 },
-				{ Name = "Green", Type = "SpellDisplayBorderColor", EnumValue = 7 },
-				{ Name = "Blue", Type = "SpellDisplayBorderColor", EnumValue = 8 },
 			},
 		},
 		{
@@ -772,14 +780,30 @@ local UIWidgetManager =
 			},
 		},
 		{
-			Name = "UIWidgetFlag",
+			Name = "UIWidgetButtonEnabledState",
 			Type = "Enumeration",
-			NumValues = 1,
-			MinValue = 1,
+			NumValues = 2,
+			MinValue = 0,
 			MaxValue = 1,
 			Fields =
 			{
-				{ Name = "UniversalWidget", Type = "UIWidgetFlag", EnumValue = 1 },
+				{ Name = "Disabled", Type = "UIWidgetButtonEnabledState", EnumValue = 0 },
+				{ Name = "Enabled", Type = "UIWidgetButtonEnabledState", EnumValue = 1 },
+			},
+		},
+		{
+			Name = "UIWidgetButtonIconType",
+			Type = "Enumeration",
+			NumValues = 5,
+			MinValue = 0,
+			MaxValue = 4,
+			Fields =
+			{
+				{ Name = "Exit", Type = "UIWidgetButtonIconType", EnumValue = 0 },
+				{ Name = "Speak", Type = "UIWidgetButtonIconType", EnumValue = 1 },
+				{ Name = "Undo", Type = "UIWidgetButtonIconType", EnumValue = 2 },
+				{ Name = "Checkmark", Type = "UIWidgetButtonIconType", EnumValue = 3 },
+				{ Name = "RedX", Type = "UIWidgetButtonIconType", EnumValue = 4 },
 			},
 		},
 		{
@@ -793,19 +817,6 @@ local UIWidgetManager =
 				{ Name = "Normal", Type = "UIWidgetFontType", EnumValue = 0 },
 				{ Name = "Shadow", Type = "UIWidgetFontType", EnumValue = 1 },
 				{ Name = "Outline", Type = "UIWidgetFontType", EnumValue = 2 },
-			},
-		},
-		{
-			Name = "UIWidgetModelSceneLayer",
-			Type = "Enumeration",
-			NumValues = 3,
-			MinValue = 0,
-			MaxValue = 2,
-			Fields =
-			{
-				{ Name = "None", Type = "UIWidgetModelSceneLayer", EnumValue = 0 },
-				{ Name = "Front", Type = "UIWidgetModelSceneLayer", EnumValue = 1 },
-				{ Name = "Back", Type = "UIWidgetModelSceneLayer", EnumValue = 2 },
 			},
 		},
 		{
@@ -843,6 +854,33 @@ local UIWidgetManager =
 				{ Name = "Hidden", Type = "UIWidgetRewardShownState", EnumValue = 0 },
 				{ Name = "ShownEarned", Type = "UIWidgetRewardShownState", EnumValue = 1 },
 				{ Name = "ShownUnearned", Type = "UIWidgetRewardShownState", EnumValue = 2 },
+			},
+		},
+		{
+			Name = "UIWidgetSpellButtonCooldownType",
+			Type = "Enumeration",
+			NumValues = 3,
+			MinValue = 0,
+			MaxValue = 2,
+			Fields =
+			{
+				{ Name = "HideCooldown", Type = "UIWidgetSpellButtonCooldownType", EnumValue = 0 },
+				{ Name = "ShowCooldown", Type = "UIWidgetSpellButtonCooldownType", EnumValue = 1 },
+				{ Name = "ShowCooldownAndDisableOnCooldown", Type = "UIWidgetSpellButtonCooldownType", EnumValue = 2 },
+			},
+		},
+		{
+			Name = "UIWidgetTextFormatType",
+			Type = "Enumeration",
+			NumValues = 4,
+			MinValue = 0,
+			MaxValue = 3,
+			Fields =
+			{
+				{ Name = "None", Type = "UIWidgetTextFormatType", EnumValue = 0 },
+				{ Name = "TimeOneLevel", Type = "UIWidgetTextFormatType", EnumValue = 1 },
+				{ Name = "TimeTwoLevel", Type = "UIWidgetTextFormatType", EnumValue = 2 },
+				{ Name = "LeadingZeroesWithSixDigits", Type = "UIWidgetTextFormatType", EnumValue = 3 },
 			},
 		},
 		{
@@ -902,13 +940,14 @@ local UIWidgetManager =
 		{
 			Name = "UIWidgetUpdateAnimType",
 			Type = "Enumeration",
-			NumValues = 2,
+			NumValues = 3,
 			MinValue = 0,
-			MaxValue = 1,
+			MaxValue = 2,
 			Fields =
 			{
 				{ Name = "None", Type = "UIWidgetUpdateAnimType", EnumValue = 0 },
 				{ Name = "Flash", Type = "UIWidgetUpdateAnimType", EnumValue = 1 },
+				{ Name = "FlashAndAnimateNumber", Type = "UIWidgetUpdateAnimType", EnumValue = 2 },
 			},
 		},
 		{
@@ -1163,6 +1202,30 @@ local UIWidgetManager =
 			},
 		},
 		{
+			Name = "ButtonHeaderWidgetVisualizationInfo",
+			Type = "Structure",
+			Fields =
+			{
+				{ Name = "shownState", Type = "WidgetShownState", Nilable = false },
+				{ Name = "headerText", Type = "string", Nilable = false },
+				{ Name = "tooltip", Type = "string", Nilable = false },
+				{ Name = "tooltipLoc", Type = "UIWidgetTooltipLocation", Nilable = false },
+				{ Name = "buttons", Type = "table", InnerType = "UIWidgetSpellButtonInfo", Nilable = false },
+				{ Name = "widgetSizeSetting", Type = "number", Nilable = false },
+				{ Name = "textureKit", Type = "textureKit", Nilable = false },
+				{ Name = "frameTextureKit", Type = "textureKit", Nilable = false },
+				{ Name = "hasTimer", Type = "bool", Nilable = false },
+				{ Name = "orderIndex", Type = "number", Nilable = false },
+				{ Name = "widgetTag", Type = "string", Nilable = false },
+				{ Name = "inAnimType", Type = "WidgetAnimationType", Nilable = false },
+				{ Name = "outAnimType", Type = "WidgetAnimationType", Nilable = false },
+				{ Name = "widgetScale", Type = "UIWidgetScale", Nilable = false },
+				{ Name = "layoutDirection", Type = "UIWidgetLayoutDirection", Nilable = false },
+				{ Name = "modelSceneLayer", Type = "UIWidgetModelSceneLayer", Nilable = false },
+				{ Name = "scriptedAnimationEffectID", Type = "number", Nilable = false },
+			},
+		},
+		{
 			Name = "CaptureBarWidgetVisualizationInfo",
 			Type = "Structure",
 			Fields =
@@ -1384,6 +1447,7 @@ local UIWidgetManager =
 				{ Name = "tooltip", Type = "string", Nilable = false },
 				{ Name = "dynamicTooltip", Type = "string", Nilable = false },
 				{ Name = "tooltipLoc", Type = "UIWidgetTooltipLocation", Nilable = false },
+				{ Name = "shiftTextType", Type = "IconAndTextShiftTextType", Nilable = false },
 				{ Name = "widgetSizeSetting", Type = "number", Nilable = false },
 				{ Name = "textureKit", Type = "textureKit", Nilable = false },
 				{ Name = "frameTextureKit", Type = "textureKit", Nilable = false },
@@ -1814,6 +1878,8 @@ local UIWidgetManager =
 				{ Name = "tooltip", Type = "string", Nilable = false },
 				{ Name = "tooltipLoc", Type = "UIWidgetTooltipLocation", Nilable = false },
 				{ Name = "textSizeType", Type = "UIWidgetTextureAndTextSizeType", Nilable = false },
+				{ Name = "textFormatType", Type = "UIWidgetTextFormatType", Nilable = false },
+				{ Name = "updateAnimType", Type = "UIWidgetUpdateAnimType", Nilable = false },
 				{ Name = "widgetSizeSetting", Type = "number", Nilable = false },
 				{ Name = "textureKit", Type = "textureKit", Nilable = false },
 				{ Name = "frameTextureKit", Type = "textureKit", Nilable = false },
@@ -1965,6 +2031,18 @@ local UIWidgetManager =
 			},
 		},
 		{
+			Name = "UIWidgetSpellButtonInfo",
+			Type = "Structure",
+			Fields =
+			{
+				{ Name = "spellID", Type = "number", Nilable = false },
+				{ Name = "tooltip", Type = "string", Nilable = false },
+				{ Name = "icon", Type = "UIWidgetButtonIconType", Nilable = false },
+				{ Name = "enabledState", Type = "UIWidgetButtonEnabledState", Nilable = false },
+				{ Name = "cooldownType", Type = "UIWidgetSpellButtonCooldownType", Nilable = false },
+			},
+		},
+		{
 			Name = "UIWidgetSpellInfo",
 			Type = "Structure",
 			Fields =
@@ -1984,6 +2062,7 @@ local UIWidgetManager =
 				{ Name = "hAlignType", Type = "WidgetTextHorizontalAlignmentType", Nilable = false },
 				{ Name = "tint", Type = "SpellDisplayTint", Nilable = false },
 				{ Name = "showGlowState", Type = "WidgetShowGlowState", Nilable = false },
+				{ Name = "showAsEarned", Type = "bool", Nilable = false },
 			},
 		},
 		{

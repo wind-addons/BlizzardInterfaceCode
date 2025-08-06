@@ -58,6 +58,7 @@ local GuildInfo =
 		{
 			Name = "GetGuildNewsInfo",
 			Type = "Function",
+			MayReturnNothing = true,
 
 			Arguments =
 			{
@@ -206,6 +207,7 @@ local GuildInfo =
 		{
 			Name = "QueryGuildMembersForRecipe",
 			Type = "Function",
+			MayReturnNothing = true,
 
 			Arguments =
 			{
@@ -222,6 +224,7 @@ local GuildInfo =
 		{
 			Name = "RemoveFromGuild",
 			Type = "Function",
+			HasRestrictions = true,
 
 			Arguments =
 			{
@@ -229,8 +232,42 @@ local GuildInfo =
 			},
 		},
 		{
+			Name = "RequestGuildRename",
+			Type = "Function",
+			HasRestrictions = true,
+
+			Arguments =
+			{
+				{ Name = "desiredName", Type = "cstring", Nilable = false },
+			},
+		},
+		{
+			Name = "RequestGuildRenameRefund",
+			Type = "Function",
+			HasRestrictions = true,
+		},
+		{
+			Name = "RequestRenameNameCheck",
+			Type = "Function",
+
+			Arguments =
+			{
+				{ Name = "desiredName", Type = "cstring", Nilable = false },
+			},
+		},
+		{
+			Name = "RequestRenameStatus",
+			Type = "Function",
+
+			Returns =
+			{
+				{ Name = "ableToRequest", Type = "bool", Nilable = false },
+			},
+		},
+		{
 			Name = "SetGuildRankOrder",
 			Type = "Function",
+			HasRestrictions = true,
 
 			Arguments =
 			{
@@ -259,6 +296,7 @@ local GuildInfo =
 		{
 			Name = "SetNote",
 			Type = "Function",
+			HasRestrictions = true,
 
 			Arguments =
 			{
@@ -380,6 +418,27 @@ local GuildInfo =
 			LiteralName = "GUILD_REGISTRAR_SHOW",
 		},
 		{
+			Name = "GuildRenameNameCheck",
+			Type = "Event",
+			LiteralName = "GUILD_RENAME_NAME_CHECK",
+			Payload =
+			{
+				{ Name = "desiredName", Type = "cstring", Nilable = false },
+				{ Name = "status", Type = "GuildErrorType", Nilable = false },
+				{ Name = "nameErrorToken", Type = "cstring", Nilable = true },
+			},
+		},
+		{
+			Name = "GuildRenameRefundResult",
+			Type = "Event",
+			LiteralName = "GUILD_RENAME_REFUND_RESULT",
+			Payload =
+			{
+				{ Name = "guildName", Type = "cstring", Nilable = false },
+				{ Name = "status", Type = "GuildErrorType", Nilable = false },
+			},
+		},
+		{
 			Name = "GuildRenameRequired",
 			Type = "Event",
 			LiteralName = "GUILD_RENAME_REQUIRED",
@@ -389,9 +448,23 @@ local GuildInfo =
 			},
 		},
 		{
+			Name = "GuildRenameStatusUpdate",
+			Type = "Event",
+			LiteralName = "GUILD_RENAME_STATUS_UPDATE",
+			Payload =
+			{
+				{ Name = "status", Type = "GuildRenameStatus", Nilable = false },
+			},
+		},
+		{
 			Name = "GuildRewardsList",
 			Type = "Event",
 			LiteralName = "GUILD_REWARDS_LIST",
+		},
+		{
+			Name = "GuildRewardsListUpdate",
+			Type = "Event",
+			LiteralName = "GUILD_REWARDS_LIST_UPDATE",
 		},
 		{
 			Name = "GuildRosterUpdate",
@@ -427,6 +500,16 @@ local GuildInfo =
 			},
 		},
 		{
+			Name = "RequestedGuildRenameResult",
+			Type = "Event",
+			LiteralName = "REQUESTED_GUILD_RENAME_RESULT",
+			Payload =
+			{
+				{ Name = "newName", Type = "cstring", Nilable = false },
+				{ Name = "status", Type = "GuildErrorType", Nilable = false },
+			},
+		},
+		{
 			Name = "RequiredGuildRenameResult",
 			Type = "Event",
 			LiteralName = "REQUIRED_GUILD_RENAME_RESULT",
@@ -444,6 +527,15 @@ local GuildInfo =
 			Name = "TabardSavePending",
 			Type = "Event",
 			LiteralName = "TABARD_SAVE_PENDING",
+		},
+		{
+			Name = "UnitGuildLevel",
+			Type = "Event",
+			LiteralName = "UNIT_GUILD_LEVEL",
+			Payload =
+			{
+				{ Name = "newLevel", Type = "number", Nilable = false },
+			},
 		},
 	},
 
@@ -466,6 +558,24 @@ local GuildInfo =
 				{ Name = "month", Type = "number", Nilable = false },
 				{ Name = "year", Type = "number", Nilable = false },
 				{ Name = "guildMembersPresent", Type = "number", Nilable = false },
+			},
+		},
+		{
+			Name = "GuildRenameStatus",
+			Type = "Structure",
+			Fields =
+			{
+				{ Name = "isNameChangeEnabled", Type = "bool", Nilable = false },
+				{ Name = "isPlayerGuildMaster", Type = "bool", Nilable = false },
+				{ Name = "refundEligibleEndTime", Type = "time_t", Nilable = false },
+				{ Name = "nextRenameTime", Type = "time_t", Nilable = false },
+				{ Name = "renamePrice", Type = "WOWMONEY", Nilable = false },
+				{ Name = "refundAmount", Type = "WOWMONEY", Nilable = false },
+				{ Name = "currentGuildMoney", Type = "WOWMONEY", Nilable = false },
+				{ Name = "result", Type = "GuildErrorType", Nilable = false },
+				{ Name = "oldGuildName", Type = "cstring", Nilable = false },
+				{ Name = "reservedName", Type = "cstring", Nilable = false },
+				{ Name = "reservedNameExpirationTime", Type = "time_t", Nilable = false },
 			},
 		},
 	},

@@ -54,9 +54,9 @@ local ItemConstants_Mainline =
 		{
 			Name = "PointsModifierSourceType",
 			Type = "Enumeration",
-			NumValues = 67,
+			NumValues = 69,
 			MinValue = 0,
-			MaxValue = 66,
+			MaxValue = 68,
 			Fields =
 			{
 				{ Name = "PlayerLevel", Type = "PointsModifierSourceType", EnumValue = 0 },
@@ -126,6 +126,8 @@ local ItemConstants_Mainline =
 				{ Name = "CreatureHealthMod", Type = "PointsModifierSourceType", EnumValue = 64 },
 				{ Name = "FirstTimeQuestCompletionRewards", Type = "PointsModifierSourceType", EnumValue = 65 },
 				{ Name = "PointsModifierSet", Type = "PointsModifierSourceType", EnumValue = 66 },
+				{ Name = "CurrencyMaxWeeklyDelta", Type = "PointsModifierSourceType", EnumValue = 67 },
+				{ Name = "RaidEncounterLevel", Type = "PointsModifierSourceType", EnumValue = 68 },
 			},
 		},
 		{
@@ -134,8 +136,7 @@ local ItemConstants_Mainline =
 			Values =
 			{
 				{ Name = "NumBagSlots", Type = "number", Value = NUM_BAG_SLOTS },
-				{ Name = "NumGenericBankSlots", Type = "number", Value = BANK_NUM_GENERIC_SLOTS },
-				{ Name = "NumBankBagSlots", Type = "number", Value = NUM_BANKBAG_SLOTS },
+				{ Name = "NumCharacterBankSlots", Type = "number", Value = NUM_CHARACTERBANK_SLOTS },
 				{ Name = "NumReagentBagSlots", Type = "number", Value = NUM_REAGENTBAG_SLOTS },
 				{ Name = "NumAccountBankSlots", Type = "number", Value = NUM_ACCOUNTBANK_SLOTS },
 				{ Name = "MAX_TRANSACTION_BANK_TABS", Type = "number", Value = 0 },

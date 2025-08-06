@@ -9,6 +9,7 @@ local AzeriteEssence =
 		{
 			Name = "ActivateEssence",
 			Type = "Function",
+			HasRestrictions = true,
 
 			Arguments =
 			{
@@ -80,6 +81,7 @@ local AzeriteEssence =
 		{
 			Name = "GetEssenceInfo",
 			Type = "Function",
+			MayReturnNothing = true,
 
 			Arguments =
 			{
@@ -94,6 +96,7 @@ local AzeriteEssence =
 		{
 			Name = "GetEssences",
 			Type = "Function",
+			MayReturnNothing = true,
 
 			Returns =
 			{
@@ -103,6 +106,7 @@ local AzeriteEssence =
 		{
 			Name = "GetMilestoneEssence",
 			Type = "Function",
+			MayReturnNothing = true,
 
 			Arguments =
 			{
@@ -117,6 +121,7 @@ local AzeriteEssence =
 		{
 			Name = "GetMilestoneInfo",
 			Type = "Function",
+			MayReturnNothing = true,
 
 			Arguments =
 			{
@@ -131,6 +136,7 @@ local AzeriteEssence =
 		{
 			Name = "GetMilestoneSpell",
 			Type = "Function",
+			MayReturnNothing = true,
 
 			Arguments =
 			{
@@ -145,6 +151,7 @@ local AzeriteEssence =
 		{
 			Name = "GetMilestones",
 			Type = "Function",
+			MayReturnNothing = true,
 
 			Returns =
 			{
@@ -208,6 +215,7 @@ local AzeriteEssence =
 		{
 			Name = "SetPendingActivationEssence",
 			Type = "Function",
+			HasRestrictions = true,
 
 			Arguments =
 			{

@@ -16,14 +16,24 @@ function EditModeSystemMixin:OnSystemLoad()
 	self.ClearAllPointsBase = self.ClearAllPoints;
 	self.ClearAllPoints = self.ClearAllPointsOverride;
 
+	self:SetupVisibilityFunctionOverrides();
+
 	EditModeManagerFrame:RegisterSystemFrame(self);
 
-	self.Selection:SetGetLabelTextFunction(function() return self:GetSystemName(); end);
 	self:SetupSettingsDialogAnchor();
 	self.snappedFrames = {};
 	self.downKeys = {};
 
 	self.settingDisplayInfoMap = EditModeSettingDisplayInfoManager:GetSystemSettingDisplayInfoMap(self.system);
+
+	self.Selection:SetSystem(self);
+end
+
+function EditModeSystemMixin:SetupVisibilityFunctionOverrides()
+	self.SetShownBase = self.SetShown;
+	self.SetShown = self.SetShownOverride;
+	self.HideBase = self.Hide;
+	self.Hide = self.HideOverride;
 end
 
 function EditModeSystemMixin:OnSystemHide()
@@ -145,6 +155,22 @@ function EditModeSystemMixin:ClearAllPointsOverride()
 	self:ClearFrameSnap();
 end
 
+function EditModeSystemMixin:HideOverride()
+	if self:ShouldBreakSnappedFramesOnHide() then
+		self:BreakSnappedFrames();
+	end
+
+	return self:HideBase();
+end
+
+function EditModeSystemMixin:SetShownOverride(shown)
+	if shown then
+		return self:Show();
+	else
+		return self:Hide();
+	end
+end
+
 function EditModeSystemMixin:UpdateClampOffsets()
 	if not self:GetLeft() then
 		self:SetClampRectInsets(0, 0, 0, 0);
@@ -207,6 +233,15 @@ end
 
 function EditModeSystemMixin:ClearDirtySetting(setting)
 	self.dirtySettings[setting] = nil;
+end
+
+function EditModeSystemMixin:AnySettingsDirty()
+	for _, setting in pairs(self.dirtySettings) do
+		if setting ~= nil then
+			return true;
+		end
+	end
+	return false;
 end
 
 function EditModeSystemMixin:TrySetCompositeNumberSettingValue(setting, newValue)
@@ -341,10 +376,14 @@ function EditModeSystemMixin:UpdateSystem(systemInfo)
 	self:AnchorSelectionFrame();
 	EditModeSystemSettingsDialog:UpdateDialog(self);
 
+	local anySettingsDirty = self:AnySettingsDirty();
+
 	local entireSystemUpdate = true;
 	for _, settingInfo in ipairs(systemInfo.settings) do
 		self:UpdateSystemSetting(settingInfo.setting, entireSystemUpdate);
 	end
+
+	self:OnUpdateSystem(anySettingsDirty);
 end
 
 function EditModeSystemMixin:UpdateSystemSetting(setting, entireSystemUpdate)
@@ -359,6 +398,11 @@ function EditModeSystemMixin:UpdateSystemSetting(setting, entireSystemUpdate)
 	if self:IsSettingDirty(setting) then
 		EditModeManagerFrame:MirrorSetting(self.system, self.systemIndex, setting, self:GetSettingValue(setting));
 	end
+end
+
+-- Override in derived mixins that need to know when a system update occurs.
+function EditModeSystemMixin:OnUpdateSystem(anySettingsDirty)
+
 end
 
 function EditModeSystemMixin:IsInitialized()
@@ -537,37 +581,37 @@ end
 
 local SELECTION_PADDING = 2;
 
-function EditModeSystemMixin:GetSelectionOffset(point, forYOffset)
-	local function GetLeftOffset()
-		return select(4, self.Selection:GetPoint(1)) - SELECTION_PADDING;
-	end
-	local function GetRightOffset()
-		return select(4, self.Selection:GetPoint(2)) + SELECTION_PADDING;
-	end
-	local function GetTopOffset()
-		return select(5, self.Selection:GetPoint(1)) + SELECTION_PADDING;
-	end
-	local function GetBottomOffset()
-		return select(5, self.Selection:GetPoint(2)) - SELECTION_PADDING;
-	end
+function EditModeSystemMixin:GetLeftOffset()
+	return select(4, self.Selection:GetPoint(1)) - SELECTION_PADDING;
+end
+function EditModeSystemMixin:GetRightOffset()
+	return select(4, self.Selection:GetPoint(2)) + SELECTION_PADDING;
+end
+function EditModeSystemMixin:GetTopOffset()
+	return select(5, self.Selection:GetPoint(1)) + SELECTION_PADDING;
+end
+function EditModeSystemMixin:GetBottomOffset()
+	return select(5, self.Selection:GetPoint(2)) - SELECTION_PADDING;
+end
 
+function EditModeSystemMixin:GetSelectionOffset(point, forYOffset)
 	local offset;
 	if point == "LEFT" then
-		offset = GetLeftOffset();
+		offset = self:GetLeftOffset();
 	elseif point == "RIGHT" then
-		offset = GetRightOffset();
+		offset = self:GetRightOffset();
 	elseif point == "TOP" then
-		offset = GetTopOffset();
+		offset = self:GetTopOffset();
 	elseif point == "BOTTOM" then
-		offset = GetBottomOffset();
+		offset = self:GetBottomOffset();
 	elseif point == "TOPLEFT" then
-		offset = forYOffset and GetTopOffset() or GetLeftOffset();
+		offset = forYOffset and self:GetTopOffset() or self:GetLeftOffset();
 	elseif point == "TOPRIGHT" then
-		offset = forYOffset and GetTopOffset() or GetRightOffset();
+		offset = forYOffset and self:GetTopOffset() or self:GetRightOffset();
 	elseif point == "BOTTOMLEFT" then
-		offset = forYOffset and GetBottomOffset() or GetLeftOffset();
+		offset = forYOffset and self:GetBottomOffset() or self:GetLeftOffset();
 	elseif point == "BOTTOMRIGHT" then
-		offset = forYOffset and GetBottomOffset() or GetRightOffset();
+		offset = forYOffset and self:GetBottomOffset() or self:GetRightOffset();
 	else
 		-- Center
 		local selectionCenterX, selectionCenterY = self.Selection:GetCenter();
@@ -639,6 +683,11 @@ function EditModeSystemMixin:BreakSnappedFrames()
 	end
 end
 
+function EditModeSystemMixin:ShouldBreakSnappedFramesOnHide()
+	-- Override as necessary, LayoutFrames (automatically sized frames) will typically need to do this
+	return self.IsLayoutFrame and self:IsLayoutFrame();
+end
+
 function EditModeSystemMixin:SetSnappedToFrame(frame)
 	if type(frame) == "string" then
 		frame = _G[frame];
@@ -688,6 +737,9 @@ end
 
 function EditModeSystemMixin:SnapToFrame(frameInfo)
 	local offsetX, offsetY = self:GetSnapOffsets(frameInfo);
+
+	-- ClearAllPoints after GetSnapOffsets since it uses the existing rect to calculate the offset
+	self:ClearAllPoints();
 	self:SetPoint(frameInfo.point, frameInfo.frame, frameInfo.relativePoint, offsetX, offsetY);
 end
 
@@ -772,6 +824,10 @@ end
 
 function EditModeSystemMixin:SetSelectionShown(shown)
 	self.Selection:SetShown(shown);
+end
+
+function EditModeSystemMixin:ShowEditInstructions(shown)
+	self.Selection:ShowEditInstructions(shown);
 end
 
 function EditModeSystemMixin:OnEditModeEnter()
@@ -973,7 +1029,7 @@ function EditModeActionBarSystemMixin:UpdateSystemSettingHideBarArt()
 end
 
 function EditModeActionBarSystemMixin:UpdateSystemSettingHideBarScrolling()
-	if(self.ActionBarPageNumber) then 
+	if(self.ActionBarPageNumber) then
 	self.ActionBarPageNumber:SetShown(not self:GetSettingValueBool(Enum.EditModeActionBarSetting.HideBarScrolling));
 	end
 end
@@ -1165,31 +1221,35 @@ function EditModeUnitFrameSystemMixin:ShouldShowSetting(setting)
 end
 
 function EditModeUnitFrameSystemMixin:AnchorSelectionFrame()
-	self.Selection:ClearAllPoints();
-	if self.systemIndex == Enum.EditModeUnitFrameSystemIndices.Player then
-		self.Selection:SetPoint("TOPLEFT", self, "TOPLEFT", 20, -16);
-		self.Selection:SetPoint("BOTTOMRIGHT", self, "BOTTOMRIGHT", -18, 17);
-	elseif self.systemIndex == Enum.EditModeUnitFrameSystemIndices.Target then
-		self.Selection:SetPoint("TOPLEFT", self, "TOPLEFT", 20, -18);
-		self.Selection:SetPoint("BOTTOMRIGHT", self, "BOTTOMRIGHT", -20, 18);
-	elseif self.systemIndex == Enum.EditModeUnitFrameSystemIndices.Focus then
-		self.Selection:SetPoint("TOPLEFT", self, "TOPLEFT", 20, -18);
-		self.Selection:SetPoint("BOTTOMRIGHT", self, "BOTTOMRIGHT", -20, 18);
-	elseif self.systemIndex == Enum.EditModeUnitFrameSystemIndices.Party then
-		self.Selection:SetPoint("TOPLEFT", self, "TOPLEFT", 0, 0);
-		self.Selection:SetPoint("BOTTOMRIGHT", self, "BOTTOMRIGHT", 0, 0);
-	elseif self.systemIndex == Enum.EditModeUnitFrameSystemIndices.Raid then
-		self.Selection:SetPoint("TOPLEFT", self, "TOPLEFT", 0, 0);
-		self.Selection:SetPoint("BOTTOMRIGHT", self, "BOTTOMRIGHT", 0, 0);
-	elseif self.systemIndex == Enum.EditModeUnitFrameSystemIndices.Boss then
-		self.Selection:SetPoint("TOPLEFT", self, "TOPLEFT", 0, 0);
-		self.Selection:SetPoint("BOTTOMRIGHT", self, "BOTTOMRIGHT", 0, 0);
-	elseif self.systemIndex == Enum.EditModeUnitFrameSystemIndices.Arena then
-		self.Selection:SetPoint("TOPLEFT", self, "TOPLEFT", 0, 0);
-		self.Selection:SetPoint("BOTTOMRIGHT", self, "BOTTOMRIGHT", 0, 0);
-	elseif self.systemIndex == Enum.EditModeUnitFrameSystemIndices.Pet then
-		self.Selection:SetPoint("TOPLEFT", self, "TOPLEFT", 4, -3);
-		self.Selection:SetPoint("BOTTOMRIGHT", self, "BOTTOMRIGHT", -4, 6);
+	if self.systemIndex ~= self.lastSystemIndex then
+		self.lastSystemIndex = self.systemIndex;
+
+		self.Selection:ClearAllPoints();
+		if self.systemIndex == Enum.EditModeUnitFrameSystemIndices.Player then
+			self.Selection:SetPoint("TOPLEFT", self, "TOPLEFT", 20, -16);
+			self.Selection:SetPoint("BOTTOMRIGHT", self, "BOTTOMRIGHT", -18, 17);
+		elseif self.systemIndex == Enum.EditModeUnitFrameSystemIndices.Target then
+			self.Selection:SetPoint("TOPLEFT", self, "TOPLEFT", 20, -18);
+			self.Selection:SetPoint("BOTTOMRIGHT", self, "BOTTOMRIGHT", -20, 18);
+		elseif self.systemIndex == Enum.EditModeUnitFrameSystemIndices.Focus then
+			self.Selection:SetPoint("TOPLEFT", self, "TOPLEFT", 20, -18);
+			self.Selection:SetPoint("BOTTOMRIGHT", self, "BOTTOMRIGHT", -20, 18);
+		elseif self.systemIndex == Enum.EditModeUnitFrameSystemIndices.Party then
+			self.Selection:SetPoint("TOPLEFT", self, "TOPLEFT", 0, 0);
+			self.Selection:SetPoint("BOTTOMRIGHT", self, "BOTTOMRIGHT", 0, 0);
+		elseif self.systemIndex == Enum.EditModeUnitFrameSystemIndices.Raid then
+			self.Selection:SetPoint("TOPLEFT", self, "TOPLEFT", 0, 0);
+			self.Selection:SetPoint("BOTTOMRIGHT", self, "BOTTOMRIGHT", 0, 0);
+		elseif self.systemIndex == Enum.EditModeUnitFrameSystemIndices.Boss then
+			self.Selection:SetPoint("TOPLEFT", self, "TOPLEFT", 0, 0);
+			self.Selection:SetPoint("BOTTOMRIGHT", self, "BOTTOMRIGHT", 0, 0);
+		elseif self.systemIndex == Enum.EditModeUnitFrameSystemIndices.Arena then
+			self.Selection:SetPoint("TOPLEFT", self, "TOPLEFT", 0, 0);
+			self.Selection:SetPoint("BOTTOMRIGHT", self, "BOTTOMRIGHT", 0, 0);
+		elseif self.systemIndex == Enum.EditModeUnitFrameSystemIndices.Pet then
+			self.Selection:SetPoint("TOPLEFT", self, "TOPLEFT", 4, -3);
+			self.Selection:SetPoint("BOTTOMRIGHT", self, "BOTTOMRIGHT", -4, 6);
+		end
 	end
 
 	self:UpdateClampOffsets();
@@ -1371,7 +1431,7 @@ function EditModeUnitFrameSystemMixin:UpdateSystemSetting(setting, entireSystemU
 	end
 
 	if setting == Enum.EditModeUnitFrameSetting.CastBarUnderneath and self:HasSetting(Enum.EditModeUnitFrameSetting.CastBarUnderneath) then
-		-- Nothing to do, this setting is mirrored by Enum.EditModeCastBarSetting.LockToPlayerFrame 
+		-- Nothing to do, this setting is mirrored by Enum.EditModeCastBarSetting.LockToPlayerFrame
 	elseif setting == Enum.EditModeUnitFrameSetting.BuffsOnTop and self:HasSetting(Enum.EditModeUnitFrameSetting.BuffsOnTop) then
 		self:UpdateSystemSettingBuffsOnTop();
 	elseif setting == Enum.EditModeUnitFrameSetting.UseLargerFrame and self:HasSetting(Enum.EditModeUnitFrameSetting.UseLargerFrame) then
@@ -1418,14 +1478,26 @@ function EditModeBossUnitFrameSystemMixin:OnEditModeExit()
 	self:UpdateShownState();
 end
 
-function EditModeBossUnitFrameSystemMixin:UpdateShownState()
-	local isAnyBossFrameShowing = false;
+function EditModeBossUnitFrameSystemMixin:ShouldAnyBossFrameShow()
 	for index, bossFrame in ipairs(self.BossTargetFrames) do
-		bossFrame:UpdateShownState();
-		isAnyBossFrameShowing = isAnyBossFrameShowing or bossFrame:IsShown();
+		if bossFrame:ShouldShow() then
+			return true;
+		end
 	end
 
-	self:SetShown(self.isInEditMode or isAnyBossFrameShowing);
+	return false;
+end
+
+function EditModeBossUnitFrameSystemMixin:UpdateShownState()
+	-- Change the visibility state of the container before the children to allow the container to continue to have a valid rect
+	-- during edit mode changes so that snapped frames can be properly repositioned.
+	self:SetShown(self.isInEditMode or self:ShouldAnyBossFrameShow());
+
+	for index, bossFrame in ipairs(self.BossTargetFrames) do
+		bossFrame:UpdateShownState();
+	end
+
+	UIParent_ManageFramePositions();
 end
 
 EditModeArenaUnitFrameSystemMixin = {};
@@ -1568,13 +1640,18 @@ function EditModeCastBarSystemMixin:SetupSettingsDialogAnchor()
 end
 
 function EditModeCastBarSystemMixin:AnchorSelectionFrame()
-	self.Selection:ClearAllPoints();
-	if self:GetSettingValueBool(Enum.EditModeCastBarSetting.LockToPlayerFrame) then
-		self.Selection:SetPoint("TOPLEFT", self, "TOPLEFT", -20, 0);
-		self.Selection:SetPoint("BOTTOMRIGHT", self, "BOTTOMRIGHT", 0, -12);
-	else
-		self.Selection:SetPoint("TOPLEFT", self, "TOPLEFT", 0, 0);
-		self.Selection:SetPoint("BOTTOMRIGHT", self, "BOTTOMRIGHT", 0, -12);
+	local lockToPlayerFrame = self:GetSettingValueBool(Enum.EditModeCastBarSetting.LockToPlayerFrame);
+	if self.lockedToPlayerFrame ~= lockToPlayerFrame then
+		self.lockedToPlayerFrame = lockToPlayerFrame;
+
+		self.Selection:ClearAllPoints();
+		if lockToPlayerFrame then
+			self.Selection:SetPoint("TOPLEFT", self, "TOPLEFT", -20, 0);
+			self.Selection:SetPoint("BOTTOMRIGHT", self, "BOTTOMRIGHT", 0, -12);
+		else
+			self.Selection:SetPoint("TOPLEFT", self, "TOPLEFT", 0, 0);
+			self.Selection:SetPoint("BOTTOMRIGHT", self, "BOTTOMRIGHT", 0, -12);
+		end
 	end
 
 	self:UpdateClampOffsets();
@@ -1589,7 +1666,7 @@ function EditModeCastBarSystemMixin:UpdateSystemSettingLockToPlayerFrame()
 	elseif not self:IsInDefaultPosition() and self.attachedToPlayerFrame then
 		-- If we aren't locked to the player frame and we aren't in our default position then
 		-- try to detach from the player frame and break any connections.
-		-- Only do this when not in our default position since our default position is in the UIParent bottom layout frame 
+		-- Only do this when not in our default position since our default position is in the UIParent bottom layout frame
 		-- which we would not want to unparent from
 		self:SetParent(UIParent);
 		self:UpdateSystemSettingBarSize();
@@ -2028,9 +2105,12 @@ function EditModeObjectiveTrackerSystemMixin:OnDragStop()
 end
 
 function EditModeObjectiveTrackerSystemMixin:AnchorSelectionFrame()
-	self.Selection:ClearAllPoints();
-	self.Selection:SetPoint("TOPLEFT", self, "TOPLEFT", -30, 0);
-	self.Selection:SetPoint("BOTTOMRIGHT", self, "BOTTOMRIGHT", 0, 0);
+	if not self.selectedAnchored then
+		self.selectedAnchored = true;
+		self.Selection:ClearAllPoints();
+		self.Selection:SetPoint("TOPLEFT", self, "TOPLEFT", -30, 0);
+		self.Selection:SetPoint("BOTTOMRIGHT", self, "BOTTOMRIGHT", 0, 0);
+	end
 end
 
 function EditModeObjectiveTrackerSystemMixin:ResetToDefaultPosition()
@@ -2130,7 +2210,7 @@ function EditModeMicroMenuSystemMixin:UpdateSystemSettingOrder()
 end
 
 function EditModeMicroMenuSystemMixin:UpdateSystemSettingSize()
-	MicroMenu:SetScaleAdjustment(self:GetSettingValue(Enum.EditModeMicroMenuSetting.Size) / 100);
+	MicroMenu:SetNormalScale(self:GetSettingValue(Enum.EditModeMicroMenuSetting.Size) / 100);
 end
 
 function EditModeMicroMenuSystemMixin:UpdateSystemSettingEyeSize()
@@ -2195,7 +2275,7 @@ function EditModeBagsSystemMixin:UpdateDisplayInfoOptions(displayInfo)
 	return updatedDisplayInfo;
 end
 
-function EditModeBagsSystemMixin:UpdateSystemSettingOrientation()
+function EditModeBagsSystemMixin:UpdateSystemSettingOrientation(entireSystemUpdate)
 	self.isHorizontal = self:DoesSettingValueEqual(Enum.EditModeBagsSetting.Orientation, Enum.BagsOrientation.Horizontal);
 
 	-- If this is for an entire system update then no need to update direction
@@ -2225,7 +2305,7 @@ function EditModeBagsSystemMixin:UpdateSystemSetting(setting, entireSystemUpdate
 	end
 
 	if setting == Enum.EditModeBagsSetting.Orientation and self:HasSetting(Enum.EditModeBagsSetting.Orientation) then
-		self:UpdateSystemSettingOrientation();
+		self:UpdateSystemSettingOrientation(entireSystemUpdate);
 	elseif setting == Enum.EditModeBagsSetting.Direction and self:HasSetting(Enum.EditModeBagsSetting.Direction) then
 		self:UpdateSystemSettingDirection();
 	elseif setting == Enum.EditModeBagsSetting.Size and self:HasSetting(Enum.EditModeBagsSetting.Size) then
@@ -2420,6 +2500,172 @@ function EditModeArchaeologyBarSystemMixin:UpdateSystemSetting(setting, entireSy
 	self:ClearDirtySetting(setting);
 end
 
+EditModeCooldownViewerSystemMixin = CreateFromMixins(EditModeSystemMixin);
+
+function EditModeCooldownViewerSystemMixin:OnEditModeExit()
+	EditModeSystemMixin.OnEditModeExit(self);
+
+	self:SetIsEditing(false);
+end
+
+function EditModeCooldownViewerSystemMixin:ShouldShowSetting(setting)
+	if not EditModeSystemMixin.ShouldShowSetting(self, setting) then
+		return false;
+	end
+
+	if self.systemIndex == Enum.EditModeCooldownViewerSystemIndices.Essential then
+		if setting == Enum.EditModeCooldownViewerSetting.BarContent
+		or setting == Enum.EditModeCooldownViewerSetting.HideWhenInactive then
+			return false;
+		end
+	end
+
+	if self.systemIndex == Enum.EditModeCooldownViewerSystemIndices.Utility then
+		if setting == Enum.EditModeCooldownViewerSetting.BarContent
+		or setting == Enum.EditModeCooldownViewerSetting.HideWhenInactive then
+			return false;
+		end
+	end
+
+	if self.systemIndex == Enum.EditModeCooldownViewerSystemIndices.BuffIcon then
+		if setting == Enum.EditModeCooldownViewerSetting.IconLimit
+		or setting == Enum.EditModeCooldownViewerSetting.BarContent then
+			return false;
+		end
+	end
+
+	if self.systemIndex == Enum.EditModeCooldownViewerSystemIndices.BuffBar then
+		if setting == Enum.EditModeCooldownViewerSetting.Orientation
+		or setting == Enum.EditModeCooldownViewerSetting.IconLimit
+		or setting == Enum.EditModeCooldownViewerSetting.IconDirection then
+			return false;
+		end
+	end
+
+	return true;
+end
+
+function EditModeCooldownViewerSystemMixin:UpdateDisplayInfoOptions(displayInfo)
+	local updatedDisplayInfo = displayInfo;
+
+	if displayInfo.setting == Enum.EditModeCooldownViewerSetting.IconDirection then
+		updatedDisplayInfo = CopyTable(displayInfo);
+
+		if self:DoesSettingValueEqual(Enum.EditModeCooldownViewerSetting.Orientation, Enum.CooldownViewerOrientation.Horizontal) then
+			updatedDisplayInfo.options[1].text = _G["HUD_EDIT_MODE_SETTING_COOLDOWN_VIEWER_ICON_DIRECTION_LEFT"];
+			updatedDisplayInfo.options[2].text = _G["HUD_EDIT_MODE_SETTING_COOLDOWN_VIEWER_ICON_DIRECTION_RIGHT"];
+		else
+			updatedDisplayInfo.options[1].text = _G["HUD_EDIT_MODE_SETTING_COOLDOWN_VIEWER_ICON_DIRECTION_DOWN"];
+			updatedDisplayInfo.options[2].text = _G["HUD_EDIT_MODE_SETTING_COOLDOWN_VIEWER_ICON_DIRECTION_UP"];
+		end
+	end
+
+	return updatedDisplayInfo;
+end
+
+function EditModeCooldownViewerSystemMixin:UpdateSystemSettingOrientation()
+	self.orientationSetting = self:GetSettingValue(Enum.EditModeCooldownViewerSetting.Orientation);
+end
+
+function EditModeCooldownViewerSystemMixin:UpdateSystemSettingIconLimit()
+	self.iconLimit = self:GetSettingValue(Enum.EditModeCooldownViewerSetting.IconLimit);
+end
+
+function EditModeCooldownViewerSystemMixin:UpdateSystemSettingIconDirection()
+	self.iconDirection = self:GetSettingValue(Enum.EditModeCooldownViewerSetting.IconDirection);
+end
+
+function EditModeCooldownViewerSystemMixin:UpdateSystemSettingIconSize()
+	local iconSizeSetting = self:GetSettingValue(Enum.EditModeCooldownViewerSetting.IconSize);
+	self.iconScale = iconSizeSetting / 100;
+end
+
+function EditModeCooldownViewerSystemMixin:UpdateSystemSettingIconPadding()
+	self.iconPadding = self:GetSettingValue(Enum.EditModeCooldownViewerSetting.IconPadding);
+end
+
+function EditModeCooldownViewerSystemMixin:UpdateSystemSettingOpacity()
+	local opacitySetting = self:GetSettingValue(Enum.EditModeCooldownViewerSetting.Opacity);
+	self:SetAlpha(opacitySetting / 100);
+end
+
+function EditModeCooldownViewerSystemMixin:UpdateSystemSettingVisibleSetting()
+	self.visibleSetting = self:GetSettingValue(Enum.EditModeCooldownViewerSetting.VisibleSetting);
+	self:UpdateShownState();
+end
+
+function EditModeCooldownViewerSystemMixin:UpdateSystemSettingBarContent()
+	if self.SetBarContent then
+		self:SetBarContent(self:GetSettingValue(Enum.EditModeCooldownViewerSetting.BarContent));
+	end
+end
+
+function EditModeCooldownViewerSystemMixin:UpdateSystemSettingHideWhenInactive()
+	self:SetHideWhenInactive(self:GetSettingValue(Enum.EditModeCooldownViewerSetting.HideWhenInactive) == 1);
+end
+
+function EditModeCooldownViewerSystemMixin:UpdateSystemSettingShowTimer()
+	self:SetTimerShown(self:GetSettingValue(Enum.EditModeCooldownViewerSetting.ShowTimer) == 1);
+end
+
+function EditModeCooldownViewerSystemMixin:UpdateSystemSettingShowTooltips()
+	self:SetTooltipsShown(self:GetSettingValue(Enum.EditModeCooldownViewerSetting.ShowTooltips) == 1);
+end
+
+function EditModeCooldownViewerSystemMixin:UseSettingAltName(setting)
+	if setting == Enum.EditModeCooldownViewerSetting.IconLimit then
+		return not self:DoesSettingValueEqual(Enum.EditModeCooldownViewerSetting.Orientation, Enum.CooldownViewerOrientation.Vertical);
+	end
+
+	return false;
+end
+
+function EditModeCooldownViewerSystemMixin:UpdateSystemSetting(setting, entireSystemUpdate)
+	EditModeSystemMixin.UpdateSystemSetting(self, setting, entireSystemUpdate);
+
+	if not self:IsSettingDirty(setting) then
+		return;
+	end
+
+	if setting == Enum.EditModeCooldownViewerSetting.Orientation and self:HasSetting(Enum.EditModeCooldownViewerSetting.Orientation) then
+		self:UpdateSystemSettingOrientation(entireSystemUpdate);
+	elseif setting == Enum.EditModeCooldownViewerSetting.IconLimit and self:HasSetting(Enum.EditModeCooldownViewerSetting.IconLimit) then
+		self:UpdateSystemSettingIconLimit();
+	elseif setting == Enum.EditModeCooldownViewerSetting.IconDirection and self:HasSetting(Enum.EditModeCooldownViewerSetting.IconDirection) then
+		self:UpdateSystemSettingIconDirection();
+	elseif setting == Enum.EditModeCooldownViewerSetting.IconSize and self:HasSetting(Enum.EditModeCooldownViewerSetting.IconSize) then
+		self:UpdateSystemSettingIconSize();
+	elseif setting == Enum.EditModeCooldownViewerSetting.IconPadding and self:HasSetting(Enum.EditModeCooldownViewerSetting.IconPadding) then
+		self:UpdateSystemSettingIconPadding();
+	elseif setting == Enum.EditModeCooldownViewerSetting.Opacity and self:HasSetting(Enum.EditModeCooldownViewerSetting.Opacity) then
+		self:UpdateSystemSettingOpacity();
+	elseif setting == Enum.EditModeCooldownViewerSetting.VisibleSetting and self:HasSetting(Enum.EditModeCooldownViewerSetting.VisibleSetting) then
+		self:UpdateSystemSettingVisibleSetting();
+	elseif setting == Enum.EditModeCooldownViewerSetting.BarContent and self:HasSetting(Enum.EditModeCooldownViewerSetting.BarContent) then
+		self:UpdateSystemSettingBarContent();
+	elseif setting == Enum.EditModeCooldownViewerSetting.HideWhenInactive and self:HasSetting(Enum.EditModeCooldownViewerSetting.HideWhenInactive) then
+		self:UpdateSystemSettingHideWhenInactive();
+	elseif setting == Enum.EditModeCooldownViewerSetting.ShowTimer and self:HasSetting(Enum.EditModeCooldownViewerSetting.ShowTimer) then
+		self:UpdateSystemSettingShowTimer();
+	elseif setting == Enum.EditModeCooldownViewerSetting.ShowTooltips and self:HasSetting(Enum.EditModeCooldownViewerSetting.ShowTooltips) then
+		self:UpdateSystemSettingShowTooltips();
+	end
+
+	if not entireSystemUpdate then
+		self:RefreshLayout();
+	end
+
+	self:ClearDirtySetting(setting);
+end
+
+function EditModeCooldownViewerSystemMixin:OnUpdateSystem(anySettingsDirty)
+	EditModeSystemMixin.OnUpdateSystem(self, anySettingsDirty);
+
+	if anySettingsDirty then
+		self:RefreshLayout();
+	end
+end
+
 local EditModeSystemSelectionLayout =
 {
 	["TopRightCorner"] = { atlas = "%s-NineSlice-Corner", mirrorLayout = true, x=8, y=8 },
@@ -2443,20 +2689,42 @@ function EditModeSystemSelectionBaseMixin:OnLoad()
 	if self.HorizontalLabel then
 		self.HorizontalLabel:SetFontObjectsToTry("GameFontHighlightLarge", "GameFontHighlightMedium", "GameFontHighlightSmall");
 	end
+
+	NineSliceUtil.ApplyLayout(self.MouseOverHighlight, EditModeSystemSelectionLayout, self.highlightTextureKit);
+	self.MouseOverHighlight:SetBlendMode("ADD");
+end
+
+function EditModeSystemSelectionBaseMixin:SetSystem(system)
+	self.system = system;
 end
 
 function EditModeSystemSelectionBaseMixin:ShowHighlighted()
-	NineSliceUtil.ApplyLayout(self, EditModeSystemSelectionLayout, self.highlightTextureKit);
+	if self.textureShown ~= "highlight" then
+		NineSliceUtil.ApplyLayout(self, EditModeSystemSelectionLayout, self.highlightTextureKit);
+		self.textureShown = "highlight";
+	end
 	self.isSelected = false;
 	self:UpdateLabelVisibility();
 	self:Show();
 end
 
 function EditModeSystemSelectionBaseMixin:ShowSelected()
-	NineSliceUtil.ApplyLayout(self, EditModeSystemSelectionLayout, self.selectedTextureKit);
+	if self.textureShown ~= "selected" then
+		NineSliceUtil.ApplyLayout(self, EditModeSystemSelectionLayout, self.selectedTextureKit);
+		self.textureShown = "selected";
+	end
 	self.isSelected = true;
 	self:UpdateLabelVisibility();
+	self:CheckShowInstructionalTooltip();
 	self:Show();
+end
+
+function EditModeSystemSelectionBaseMixin:IsSelected()
+	return self.isSelected;
+end
+
+function EditModeSystemSelectionBaseMixin:ShouldShowLabelText()
+	return self:IsSelected() or self:IsShowingEditInstructions();
 end
 
 function EditModeSystemSelectionBaseMixin:OnDragStart()
@@ -2471,25 +2739,59 @@ function EditModeSystemSelectionBaseMixin:OnMouseDown()
 	EditModeManagerFrame:SelectSystem(self.parent);
 end
 
-EditModeSystemSelectionMixin = {};
-
-function EditModeSystemSelectionMixin:SetGetLabelTextFunction(getLabelText)
-	self.getLabelText = getLabelText;
+function EditModeSystemSelectionBaseMixin:OnEnter()
+	self:ShowEditInstructions(true);
+	self:CheckShowInstructionalTooltip();
 end
 
-function EditModeSystemSelectionMixin:UpdateLabelVisibility()
-	if self.getLabelText then
-		self.Label:SetText(self.getLabelText());
+function EditModeSystemSelectionBaseMixin:OnLeave()
+	self:ShowEditInstructions(false);
+	self:HideInstructionalTooltip();
+end
+
+function EditModeSystemSelectionBaseMixin:ShowEditInstructions(shown)
+	self.instructionsShown = shown;
+
+	self.MouseOverHighlight:SetShown(shown);
+	self:UpdateLabelVisibility();
+end
+
+function EditModeSystemSelectionBaseMixin:IsShowingEditInstructions()
+	return self.instructionsShown;
+end
+
+function EditModeSystemSelectionBaseMixin:CheckShowInstructionalTooltip()
+	if not self:IsSelected() then
+		local tooltip = GetAppropriateTooltip();
+		tooltip:SetOwner(self, "ANCHOR_CURSOR");
+		tooltip:SetText(self.system:GetSystemName());
+		tooltip:Show();
+	else
+		self:HideInstructionalTooltip();
+	end
+end
+
+function EditModeSystemSelectionBaseMixin:HideInstructionalTooltip()
+	local tooltip = GetAppropriateTooltip();
+	tooltip:Hide();
+end
+
+function EditModeSystemSelectionBaseMixin:GetLabelText()
+	if self:IsSelected() then
+		return self.system:GetSystemName();
 	end
 
-	self.Label:SetShown(self.isSelected);
+	return HUD_EDIT_MODE_INSTRUCTIONS_CLICK_TO_EDIT;
 end
 
-EditModeSystemSelectionDoubleLabelMixin = {};
+EditModeSystemSelectionMixin = CreateFromMixins(EditModeSystemSelectionBaseMixin);
 
-function EditModeSystemSelectionDoubleLabelMixin:SetGetLabelTextFunction(getLabelText)
-	self.getLabelText = getLabelText;
+function EditModeSystemSelectionMixin:UpdateLabelVisibility()
+	self.Label:SetText(self:GetLabelText());
+	self.Label:SetShown(self:ShouldShowLabelText());
 end
+
+EditModeSystemSelectionDoubleLabelMixin = CreateFromMixins(EditModeSystemSelectionBaseMixin);
 
 function EditModeSystemSelectionDoubleLabelMixin:SetVerticalState(vertical)
 	self.isVertical = vertical;
@@ -2497,12 +2799,11 @@ function EditModeSystemSelectionDoubleLabelMixin:SetVerticalState(vertical)
 end
 
 function EditModeSystemSelectionDoubleLabelMixin:UpdateLabelVisibility()
-	if self.getLabelText then
-		local labelText = self.getLabelText();
-		self.HorizontalLabel:SetText(labelText);
-		self.VerticalLabel:SetText(labelText);
-	end
+	local labelText = self:GetLabelText();
+	self.HorizontalLabel:SetText(labelText);
+	self.VerticalLabel:SetText(labelText);
 
-	self.HorizontalLabel:SetShown(self.isSelected and not self.isVertical);
-	self.VerticalLabel:SetShown(self.isSelected and self.isVertical);
+	local showLabel = self:ShouldShowLabelText();
+	self.HorizontalLabel:SetShown(showLabel and not self.isVertical);
+	self.VerticalLabel:SetShown(showLabel and self.isVertical);
 end

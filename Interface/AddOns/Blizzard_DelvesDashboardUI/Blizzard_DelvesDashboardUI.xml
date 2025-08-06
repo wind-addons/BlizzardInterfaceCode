@@ -32,15 +32,18 @@
             </Layer>
             <Layer level="ARTWORK">
                 <FontString parentKey="PanelTitle" inherits="GameFontHighlightLarge">
-                    <Size x="180" y="32"/>
+                    <Size x="180" y="40"/>
                     <Anchors>
                         <Anchor point="TOP" y="-25"/>
                     </Anchors>
                 </FontString>
-                <FontString parentKey="PanelDescription" inherits="GameFontNormalMed2" wordwrap="true" justifyV="TOP">
+                <FontString parentKey="PanelDescription" inherits="GameFontNormalMed2" mixin="AutoScalingFontStringMixin" wordwrap="true" justifyV="TOP">
+                    <KeyValues>
+                        <KeyValue key="minLineHeight" value="12" type="number"/>
+                    </KeyValues>
                     <Size x="160" y="55"/>
                     <Anchors>
-                        <Anchor point="TOP" relativeKey="$parent.PanelTitle" relativePoint="BOTTOM" y="6"/>
+                        <Anchor point="TOP" relativeKey="$parent.PanelTitle" relativePoint="BOTTOM" y="3"/>
                     </Anchors>
                 </FontString>
             </Layer>
@@ -151,13 +154,13 @@
 						<Texture parentKey="Icon">
                             <Size x="50" y="50"/>
 							<Anchors>
-								<Anchor point="CENTER" x="0" y="0"/>
+								<Anchor point="CENTER" x="0" y="3"/>
 							</Anchors>
 						</Texture>
                         <MaskTexture parentKey="CircleMask" atlas="CircleMask" hWrapMode="CLAMPTOBLACKADDITIVE" vWrapMode="CLAMPTOBLACKADDITIVE">
-							<Size x="48" y="44"/>
+							<Size x="44" y="44"/>
 							<Anchors>
-								<Anchor point="CENTER" x="-1" y="0"/>
+								<Anchor point="CENTER" x="0" y="3"/>
 							</Anchors>
 							<MaskedTextures>
 								<MaskedTexture childKey="Icon"/>
@@ -165,10 +168,10 @@
 						</MaskTexture>
 					</Layer>
 					<Layer level="OVERLAY">
-						<Texture parentKey="IconBorder" atlas="delves-dashboard-bar-reward-border-disabled" useAtlasSize="false">
+						<Texture parentKey="IconBorder" atlas="delves-dashboard-bar-reward-border" useAtlasSize="false">
 							<Size x="56" y="56"/>
 							<Anchors>
-								<Anchor point="CENTER" relativeKey="$parent.Icon" relativePoint="CENTER" y="3"/>
+								<Anchor point="CENTER" relativeKey="$parent.Icon" relativePoint="CENTER"/>
 							</Anchors>
 						</Texture>
 						<Texture parentKey="Sparkles" alpha="0" alphaMode="ADD" atlas="activities-complete-diamond-sparkles">
@@ -227,7 +230,7 @@
         </Layers>
         <Frames>
             <!-- Reputation ThresholdBar -->
-			<StatusBar parentKey="ThresholdBar" frameBuffer="true">
+			<StatusBar parentKey="ThresholdBar" mixin="DelvesThresholdBarMixin" frameBuffer="true">
 				<BarTexture parentKey="BarFill" atlas="delves-dashboard-bar-fill"/>
 				<Size x="475" y="25"/>
 				<Anchors>
@@ -303,6 +306,10 @@
 						<Alpha childKey="BarFillGlow" duration="0.25" fromAlpha="0" toAlpha="1"/>
 					</AnimationGroup>
 				</Animations>
+				<Scripts>
+					<OnEnter method="OnEnter"/>
+					<OnLeave method="OnLeave"/>
+				</Scripts>
 			</StatusBar>
 
             <!-- Button Panels -->
@@ -323,9 +330,9 @@
                         <Frames>
                             <!-- Companion Display -->
                             <ModelScene parentKey="CompanionModelScene" inherits="NoCameraControlModelSceneMixinTemplate" mixin="CompanionConfigButtonPanelModelSceneMixin">
-                                <Size x="125" y="155"/>
+                                <Size x="125" y="135"/>
                                 <Anchors>
-                                    <Anchor point="CENTER" y="-4"/>
+                                    <Anchor point="CENTER" y="-19"/>
                                 </Anchors>
                                 <Scripts>
                                     <OnShow method="OnShow"/>
@@ -335,7 +342,7 @@
                             <Button parentKey="CompanionConfigButton" inherits="MagicButtonTemplate" mixin="CompanionConfigButtonPanelMixin" motionScriptsWhileDisabled="true">
                                 <Size x="130" y="30"/>
                                 <Anchors>
-                                    <Anchor point="BOTTOM"  y="32"/>
+                                    <Anchor point="BOTTOM" y="27"/>
                                 </Anchors>
                                 <Layers>
                                     <Layer level="OVERLAY">
@@ -369,7 +376,7 @@
                             <Frame parentKey="GreatVaultButton" mixin="GreatVaultButtonMixin">
                                 <Size x="84" y="70"/>
                                 <Anchors>
-                                    <Anchor point="CENTER" x="-1" y="-20"/>
+                                    <Anchor point="CENTER" x="-1" y="-40"/>
                                 </Anchors>
                                 <Layers>
                                     <Layer level="ARTWORK">

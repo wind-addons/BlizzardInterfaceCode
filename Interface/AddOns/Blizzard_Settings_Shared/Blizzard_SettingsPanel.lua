@@ -68,7 +68,7 @@ function SettingsPanelMixin:OnLoad()
 	local settingsList = self:GetSettingsList();
 	settingsList.Header.DefaultsButton.Text:SetText(SETTINGS_DEFAULTS);
 	settingsList.Header.DefaultsButton:SetScript("OnClick", function(button, buttonName, down)
-		ShowAppropriateDialog("GAME_SETTINGS_APPLY_DEFAULTS");
+		StaticPopup_Show("GAME_SETTINGS_APPLY_DEFAULTS");
 	end);
 
 	self.SearchBox:HookScript("OnTextChanged", GenerateClosure(self.OnSearchTextChanged, self));
@@ -154,7 +154,7 @@ function SettingsPanelMixin:OnShow()
 	end
 
 	-- WOW10-16900
-	if IsOnGlueScreen() then
+	if C_Glue.IsOnGlueScreen() then
 		self:SetFrameStrata("DIALOG");
 		GlueParent_AddModalFrame(self);
 
@@ -168,6 +168,8 @@ function SettingsPanelMixin:OnShow()
 
 	self:CallRefreshOnCanvases();
 	self:CheckTutorials(); 
+
+	categories:RefreshNewFeatures();
 end
 
 function SettingsPanelMixin:CheckTutorials()
@@ -186,7 +188,7 @@ function SettingsPanelMixin:OnHide()
 
 	self:ClearActiveCategoryTutorial();
 
-	if IsOnGlueScreen() then
+	if C_Glue.IsOnGlueScreen() then
 		GlueParent_RemoveModalFrame(self);
 		GlueParent_CloseSecondaryScreen();
 		return;
@@ -197,6 +199,8 @@ function SettingsPanelMixin:OnHide()
 	local checked = Settings.GetValue("PROXY_CHARACTER_SPECIFIC_BINDINGS");
 	local bindingSet = checked and Enum.BindingSet.Character or Enum.BindingSet.Account;
 	SaveBindings(bindingSet);
+
+	EventRegistry:TriggerEvent("SettingsPanel.OnHide");
 end
 
 function SettingsPanelMixin:Commit(unrevertable)
@@ -208,7 +212,7 @@ end
 
 function SettingsPanelMixin:Close(skipTransitionBackToOpeningPanel)
 	if self:HasUnappliedSettings() then
-		ShowAppropriateDialog("GAME_SETTINGS_CONFIRM_DISCARD");
+		StaticPopup_Show("GAME_SETTINGS_CONFIRM_DISCARD");
 	else
 		self:ExitWithCommit(skipTransitionBackToOpeningPanel);
 	end
@@ -248,7 +252,7 @@ end
 function SettingsPanelMixin:TransitionBackOpeningPanel()
 	HideUIPanel(self);
 
-	if not IsOnGlueScreen() then
+	if not C_Glue.IsOnGlueScreen() then
 		if EditModeManagerFrame:IsEditModeActive() then
 			ShowUIPanel(EditModeManagerFrame);
 		else
@@ -286,12 +290,16 @@ function SettingsPanelMixin:SetKeybindingsCategory(category)
 end
 
 function SettingsPanelMixin:CommitBindings()
-	if not IsOnGlueScreen() then
+	if not C_Glue.IsOnGlueScreen() then
 		SaveBindings(GetCurrentBindingSet());
 
 		local shouldSave = true;
 		securecallfunction(SaveAllCustomBindings, shouldSave);
 	end
+end
+
+function SettingsPanelMixin:IsCommitInProgress()
+	return self.isCommitInProgress;
 end
 
 function SettingsPanelMixin:CommitSettings(unrevertable)
@@ -308,32 +316,39 @@ function SettingsPanelMixin:CommitSettings(unrevertable)
 	end
 	SortTableByCommitOrder(settings);
 
-	for index, setting in ipairs(settings) do
-		saveBindings = saveBindings or securecallfunction(setting.HasCommitFlag, setting, Settings.CommitFlag.SaveBindings);
-		gxRestart = gxRestart or securecallfunction(setting.HasCommitFlag, setting, Settings.CommitFlag.GxRestart);
-		windowUpdate = windowUpdate or securecallfunction(setting.HasCommitFlag, setting, Settings.CommitFlag.UpdateWindow);
-		
-		if not unrevertable then
-			if securecallfunction(setting.HasCommitFlag, setting, Settings.CommitFlag.Revertable) then
-				local originalValue = securecallfunction(setting.GetValueDerived, setting);
-				table.insert(self.revertableSettings, {setting = setting, originalValue = originalValue});
+	if #settings > 0 then
+		self.isCommitInProgress = true;
+
+		for index, setting in ipairs(settings) do
+			saveBindings = saveBindings or securecallfunction(setting.HasCommitFlag, setting, Settings.CommitFlag.SaveBindings);
+			gxRestart = gxRestart or securecallfunction(setting.HasCommitFlag, setting, Settings.CommitFlag.GxRestart);
+			windowUpdate = windowUpdate or securecallfunction(setting.HasCommitFlag, setting, Settings.CommitFlag.UpdateWindow);
+			
+			if not unrevertable then
+				if securecallfunction(setting.HasCommitFlag, setting, Settings.CommitFlag.Revertable) then
+					local originalValue = securecallfunction(setting.GetValueDerived, setting);
+					table.insert(self.revertableSettings, {setting = setting, originalValue = originalValue});
+				end
 			end
+			
+			securecallfunction(setting.Commit, setting);
 		end
-		
-		securecallfunction(setting.Commit, setting);
+
+		self.isCommitInProgress = nil;
 	end
-	
+
 	self:FinalizeCommit(saveBindings, gxRestart, windowUpdate);
 
 	if #self.revertableSettings > 0 then
 		local duration = 8.0;
-		ShowAppropriateDialog("GAME_SETTINGS_TIMED_CONFIRMATION", nil, nil, duration);
+		StaticPopup_Show("GAME_SETTINGS_TIMED_CONFIRMATION", nil, nil, duration);
 		local function Timer()
 			self:RevertSettings();
-			HideAppropriateDialog("GAME_SETTINGS_TIMED_CONFIRMATION");
+			StaticPopup_Hide("GAME_SETTINGS_TIMED_CONFIRMATION");
 		end
 		self.Timer = C_Timer.NewTimer(duration, Timer);
 	end
+
 end
 
 function SettingsPanelMixin:FinalizeCommit(saveBindings, gxRestart, windowUpdate)
@@ -410,8 +425,10 @@ function SettingsPanelMixin:SetAllSettingsToDefaults()
 	self:WipeModifiedTable();
 	self:CheckApplyButton();
 	self:FinalizeCommit(saveBindings, gxRestart, windowUpdate);
-	
+
 	Settings.SafeLoadBindings(Enum.BindingSet.Default);
+
+	EventRegistry:TriggerEvent("Settings.Defaulted");
 end
 
 function SettingsPanelMixin:SetCurrentCategorySettingsToDefaults()
@@ -455,6 +472,8 @@ function SettingsPanelMixin:SetCurrentCategorySettingsToDefaults()
 	if currentCategory == self.keybindingsCategory then
 		Settings.SafeLoadBindings(Enum.BindingSet.Default);
 	end
+
+	EventRegistry:TriggerEvent("Settings.CategoryDefaulted", currentCategory);
 end
 
 function SettingsPanelMixin:HasUnappliedSettings()

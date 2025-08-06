@@ -52,9 +52,13 @@ function ProfessionsCrafterOrderRewardTooltipMixin:SetReward(reward)
 		end
 	end
 
-	local itemQualityColor = ITEM_QUALITY_COLORS[itemQuality or Enum.ItemQuality.Common];
-	local itemDisplayText = itemQualityColor.color:WrapTextInColorCode(itemName or "");
-	self.RewardName:SetText(itemDisplayText);
+	local colorData = ColorManager.GetColorDataForItemQuality(itemQuality or Enum.ItemQuality.Common);
+	if colorData then
+		local itemDisplayText = colorData.color:WrapTextInColorCode(itemName or "");
+		self.RewardName:SetText(itemDisplayText);
+	else
+		self.RewardName:SetText(itemName or "");
+	end
 
 	self:SetHeight(self.Reward:GetHeight());
 	self:SetWidth(self.Reward:GetWidth() + self.RewardName:GetWidth() + 20);
@@ -304,7 +308,9 @@ function ProfessionsCrafterOrderViewMixin:OnLoad()
 	local function OnUseBestQualityModified(o, checked)
 		local transaction = self.OrderDetails.SchematicForm:GetTransaction();
 		Professions.AllocateAllBasicReagents(transaction, checked);
-		self:UpdateCreateButton();
+
+		-- SchematicPostInit handles overriding customer provided reagents and restoring to a correct state after re-allocating the basic reagents.
+		self:SchematicPostInit();
 	end
 
 	self.OrderDetails.SchematicForm:RegisterCallback(ProfessionsRecipeSchematicFormMixin.Event.UseBestQualityModified, OnUseBestQualityModified, self);
@@ -374,11 +380,7 @@ function ProfessionsCrafterOrderViewMixin:OnEvent(event, ...)
             return;
         end
 
-		if result == Enum.CraftingOrderResult.NoAccountItems then
-			UIErrorsFrame:AddExternalErrorMessage(CRAFTING_ORDER_FAILED_ACCOUNT_ITEMS);
-		else
-			UIErrorsFrame:AddExternalErrorMessage(PROFESSIONS_ORDER_OP_FAILED);
-		end
+		UIErrorsFrame:AddExternalErrorMessage(PROFESSIONS_ORDER_OP_FAILED);
 	elseif event == "CRAFTINGORDERS_FULFILL_ORDER_RESPONSE" then
 		local result, orderID = ...;
 		if orderID ~= self.order.orderID then
@@ -421,7 +423,14 @@ function ProfessionsCrafterOrderViewMixin:OnEvent(event, ...)
 			local function Update()
 				-- Clear recrafting so that we go back to the order complete view if we were recrafting
 				self.recraftingOrderID = nil;
-				self:SetOrder(C_CraftingOrders.GetClaimedOrder());
+
+				-- Claimed order may have disappeared by the time animation finishes, close the UI in that case.
+				local order = C_CraftingOrders.GetClaimedOrder();
+				if order then
+					self:SetOrder(order);
+				else
+					self:CloseOrder();
+				end
 			end
 
 			if self.OrderDetails.SchematicForm.Details.QualityMeter.animating then
@@ -558,15 +567,18 @@ function ProfessionsCrafterOrderViewMixin:SchematicPostInit()
     if not self.order.isFulfillable then
         for _, reagentInfo in ipairs(self.order.reagents) do
             local allocations = transaction:GetAllocations(reagentInfo.slotIndex);
-
-			-- isBasicReagent check here to handle multiple allocations within the same slot (qualities)
-            if not self.reagentSlotProvidedByCustomer[reagentInfo.slotIndex] or not reagentInfo.isBasicReagent then
-                allocations:Clear();
-                self.reagentSlotProvidedByCustomer[reagentInfo.slotIndex] = true;
-            end
-            -- These allocations get cleared before sending the craft, but we allocate them for craft readiness validation
-            allocations:Allocate(reagentInfo.reagent, reagentInfo.reagent.quantity);
-            reagentSlotToItemID[reagentInfo.slotIndex] = reagentInfo.reagent.itemID;
+			if allocations then
+				-- isBasicReagent check here to handle multiple allocations within the same slot (qualities)
+				if not self.reagentSlotProvidedByCustomer[reagentInfo.slotIndex] or not reagentInfo.isBasicReagent then
+					allocations:Clear();
+					self.reagentSlotProvidedByCustomer[reagentInfo.slotIndex] = true;
+				end
+				-- These allocations get cleared before sending the craft, but we allocate them for craft readiness validation
+				allocations:Allocate(reagentInfo.reagent, reagentInfo.reagent.quantity);
+				reagentSlotToItemID[reagentInfo.slotIndex] = reagentInfo.reagent.itemID;
+			else
+				assertsafe(false, "Crafting order reagents do not match recipe for spellID=%d", self.order.spellID);
+			end
         end
     end
 
@@ -681,7 +693,7 @@ function ProfessionsCrafterOrderViewMixin:SchematicPostInit()
         self.OrderDetails.SchematicForm.recraftSlot.OutputSlot:SetScript("OnEnter", function(slot)
             GameTooltip:SetOwner(slot, "ANCHOR_RIGHT");
             local reagents = transaction:CreateCraftingReagentInfoTbl();
-            GameTooltip:SetRecipeResultItemForOrder(self.order.spellID, reagents, self.order.orderID, self.OrderDetails.SchematicForm:GetCurrentRecipeLevel());
+            GameTooltip:SetRecipeResultItemForOrder(self.order.spellID, reagents, self.order.orderID, self.OrderDetails.SchematicForm:GetCurrentRecipeLevel(), self.OrderDetails.SchematicForm:GetOutputOverrideQuality());
         end);
         self.OrderDetails.SchematicForm.recraftSlot.InputSlot:SetScript("OnMouseDown", nil);
     end
@@ -884,7 +896,6 @@ function ProfessionsCrafterOrderViewMixin:SetOrder(order)
     local isRecraft = self:IsRecrafting();
 	local recipeSchematic = C_TradeSkillUI.GetRecipeSchematic(self.order.spellID, isRecraft);
     self.OrderDetails.SchematicForm.transaction = CreateProfessionsRecipeTransaction(recipeSchematic);
-    self.OrderDetails.SchematicForm.transaction:SetUseCharacterInventoryOnly(true);
     if isRecraft then
         self.OrderDetails.SchematicForm.transaction:SetRecraftAllocationOrderID(order.orderID);
     end
@@ -915,9 +926,13 @@ function ProfessionsCrafterOrderViewMixin:SetOrder(order)
             local itemLink = craftedItem:GetItemLink();
             local quality = craftedItem:GetItemQuality();
             Professions.SetupOutputIconCommon(self.OrderDetails.FulfillmentForm.ItemIcon, schematic.quantityMin, schematic.quantityMax, icon, itemLink, quality);
-    
-            local color = craftedItem:GetItemQualityColor().color;
-            local itemNameText = WrapTextInColor(craftedItem:GetItemName(), color);
+
+			local itemNameText = craftedItem:GetItemName();
+			local colorData = craftedItem:GetItemQualityColor();
+			if colorData then
+				itemNameText = WrapTextInColor(itemNameText, colorData.color);
+			end
+
             self.OrderDetails.FulfillmentForm.ItemName:SetWidth(500);
             self.OrderDetails.FulfillmentForm.ItemName:SetText(itemNameText);
             self.OrderDetails.FulfillmentForm.ItemName:SetWidth(self.OrderDetails.FulfillmentForm.ItemName:GetStringWidth());

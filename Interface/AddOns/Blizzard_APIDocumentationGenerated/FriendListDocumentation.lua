@@ -9,6 +9,8 @@ local FriendList =
 		{
 			Name = "AddFriend",
 			Type = "Function",
+			HasRestrictions = true,
+			RequiresFriendList = true,
 
 			Arguments =
 			{
@@ -19,6 +21,7 @@ local FriendList =
 		{
 			Name = "AddIgnore",
 			Type = "Function",
+			RequiresFriendList = true,
 
 			Arguments =
 			{
@@ -33,6 +36,7 @@ local FriendList =
 		{
 			Name = "AddOrDelIgnore",
 			Type = "Function",
+			RequiresFriendList = true,
 
 			Arguments =
 			{
@@ -42,6 +46,8 @@ local FriendList =
 		{
 			Name = "AddOrRemoveFriend",
 			Type = "Function",
+			HasRestrictions = true,
+			RequiresFriendList = true,
 
 			Arguments =
 			{
@@ -52,6 +58,7 @@ local FriendList =
 		{
 			Name = "DelIgnore",
 			Type = "Function",
+			RequiresFriendList = true,
 
 			Arguments =
 			{
@@ -66,6 +73,7 @@ local FriendList =
 		{
 			Name = "DelIgnoreByIndex",
 			Type = "Function",
+			RequiresFriendList = true,
 
 			Arguments =
 			{
@@ -75,6 +83,8 @@ local FriendList =
 		{
 			Name = "GetFriendInfo",
 			Type = "Function",
+			MayReturnNothing = true,
+			RequiresFriendList = true,
 
 			Arguments =
 			{
@@ -89,6 +99,8 @@ local FriendList =
 		{
 			Name = "GetFriendInfoByIndex",
 			Type = "Function",
+			MayReturnNothing = true,
+			RequiresFriendList = true,
 
 			Arguments =
 			{
@@ -103,6 +115,7 @@ local FriendList =
 		{
 			Name = "GetIgnoreName",
 			Type = "Function",
+			RequiresFriendList = true,
 
 			Arguments =
 			{
@@ -117,6 +130,7 @@ local FriendList =
 		{
 			Name = "GetNumFriends",
 			Type = "Function",
+			RequiresFriendList = true,
 
 			Returns =
 			{
@@ -126,6 +140,7 @@ local FriendList =
 		{
 			Name = "GetNumIgnores",
 			Type = "Function",
+			RequiresFriendList = true,
 
 			Returns =
 			{
@@ -135,6 +150,7 @@ local FriendList =
 		{
 			Name = "GetNumOnlineFriends",
 			Type = "Function",
+			RequiresFriendList = true,
 
 			Returns =
 			{
@@ -144,6 +160,7 @@ local FriendList =
 		{
 			Name = "GetNumWhoResults",
 			Type = "Function",
+			RequiresFriendList = true,
 
 			Returns =
 			{
@@ -154,6 +171,7 @@ local FriendList =
 		{
 			Name = "GetSelectedFriend",
 			Type = "Function",
+			RequiresFriendList = true,
 
 			Returns =
 			{
@@ -163,6 +181,7 @@ local FriendList =
 		{
 			Name = "GetSelectedIgnore",
 			Type = "Function",
+			RequiresFriendList = true,
 
 			Returns =
 			{
@@ -172,6 +191,8 @@ local FriendList =
 		{
 			Name = "GetWhoInfo",
 			Type = "Function",
+			MayReturnNothing = true,
+			RequiresFriendList = true,
 
 			Arguments =
 			{
@@ -186,6 +207,7 @@ local FriendList =
 		{
 			Name = "IsFriend",
 			Type = "Function",
+			RequiresFriendList = true,
 
 			Arguments =
 			{
@@ -200,6 +222,7 @@ local FriendList =
 		{
 			Name = "IsIgnored",
 			Type = "Function",
+			RequiresFriendList = true,
 
 			Arguments =
 			{
@@ -214,6 +237,7 @@ local FriendList =
 		{
 			Name = "IsIgnoredByGuid",
 			Type = "Function",
+			RequiresFriendList = true,
 
 			Arguments =
 			{
@@ -228,6 +252,7 @@ local FriendList =
 		{
 			Name = "IsOnIgnoredList",
 			Type = "Function",
+			RequiresFriendList = true,
 
 			Arguments =
 			{
@@ -242,6 +267,7 @@ local FriendList =
 		{
 			Name = "RemoveFriend",
 			Type = "Function",
+			RequiresFriendList = true,
 
 			Arguments =
 			{
@@ -256,6 +282,7 @@ local FriendList =
 		{
 			Name = "RemoveFriendByIndex",
 			Type = "Function",
+			RequiresFriendList = true,
 
 			Arguments =
 			{
@@ -265,6 +292,8 @@ local FriendList =
 		{
 			Name = "SendWho",
 			Type = "Function",
+			HasRestrictions = true,
+			RequiresFriendList = true,
 
 			Arguments =
 			{
@@ -275,6 +304,7 @@ local FriendList =
 		{
 			Name = "SetFriendNotes",
 			Type = "Function",
+			RequiresFriendList = true,
 
 			Arguments =
 			{
@@ -290,6 +320,7 @@ local FriendList =
 		{
 			Name = "SetFriendNotesByIndex",
 			Type = "Function",
+			RequiresFriendList = true,
 
 			Arguments =
 			{
@@ -300,6 +331,7 @@ local FriendList =
 		{
 			Name = "SetSelectedFriend",
 			Type = "Function",
+			RequiresFriendList = true,
 
 			Arguments =
 			{
@@ -309,6 +341,7 @@ local FriendList =
 		{
 			Name = "SetSelectedIgnore",
 			Type = "Function",
+			RequiresFriendList = true,
 
 			Arguments =
 			{
@@ -318,6 +351,7 @@ local FriendList =
 		{
 			Name = "SetWhoToUi",
 			Type = "Function",
+			RequiresFriendList = true,
 
 			Arguments =
 			{
@@ -327,10 +361,12 @@ local FriendList =
 		{
 			Name = "ShowFriends",
 			Type = "Function",
+			RequiresFriendList = true,
 		},
 		{
 			Name = "SortWho",
 			Type = "Function",
+			RequiresFriendList = true,
 
 			Arguments =
 			{
@@ -530,7 +566,6 @@ local FriendList =
 				{ Name = "dnd", Type = "bool", Nilable = false },
 				{ Name = "afk", Type = "bool", Nilable = false },
 				{ Name = "rafLinkType", Type = "RafLinkType", Nilable = false },
-				{ Name = "mobile", Type = "bool", Nilable = false },
 			},
 		},
 		{

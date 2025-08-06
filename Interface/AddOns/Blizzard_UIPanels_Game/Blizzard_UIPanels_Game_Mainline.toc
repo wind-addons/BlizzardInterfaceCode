@@ -1,7 +1,7 @@
 ## Title: Blizzard_UIPanels_Game
 ## Author: Blizzard Entertainment
 ## DefaultState: enabled
-## Dependencies: Blizzard_FrameXML, Blizzard_EditMode, Blizzard_GameTooltip, Blizzard_UIPanelTemplates, Blizzard_POIButton, Blizzard_MoneyFrame
+## Dependencies: Blizzard_FrameXML, Blizzard_EditMode, Blizzard_GameTooltip, Blizzard_UIPanelTemplates, Blizzard_POIButton, Blizzard_MoneyFrame, Blizzard_AccessibilityTemplates, Blizzard_Colors, Blizzard_HelpPlate
 ## AllowLoad: game
 ## AllowLoadGameType: mainline
 Mainline\CastingBarFrame.lua
@@ -20,8 +20,9 @@ Mainline\ReputationFrame.lua
 Mainline\ReputationFrame.xml
 Mainline\FriendshipStatusBar.lua
 Mainline\FriendshipStatusBar.xml
-Mainline\QuestFrame.lua
+Mainline\QuestFrameTemplates.lua
 Mainline\QuestFrameTemplates.xml
+Mainline\QuestFrame.lua
 Mainline\QuestFrame.xml
 Mainline\QuestInfo.lua
 Mainline\QuestInfo.xml
@@ -39,14 +40,16 @@ Mainline\GroupLootFrame.lua
 Mainline\GroupLootFrame.xml
 Mainline\ItemTextFrame.lua
 Mainline\ItemTextFrame.xml
-Mainline\TaxiFrame.lua
-Mainline\TaxiFrame.xml
+Shared\TaxiFrame.lua
+Shared\TaxiFrame.xml
 Mainline\BankFrame.lua
 Mainline\BankFrame.xml
 Mainline\RoleSelectionTemplate.lua
 Mainline\RoleSelectionTemplate.xml
 Mainline\ItemRef.lua
 Mainline\ItemRef.xml
+Mainline\ItemRefHandlers.lua
+Shared\ItemRefHandlersShared.lua
 Shared\SocialQueue.lua
 Mainline\UnitPositionFrameTemplates.lua
 Mainline\UnitPositionFrameTemplates.xml
@@ -63,6 +66,8 @@ Mainline\CampaignOverview.lua
 Mainline\CampaignOverview.xml
 Mainline\MapLegendFrame.lua
 Mainline\MapLegendFrame.xml
+Mainline\EventScheduler.lua
+Mainline\EventScheduler.xml
 Mainline\QuestMapFrame.lua
 Mainline\QuestMapFrame.xml
 Mainline\TabardModelControlButtonMixin.lua

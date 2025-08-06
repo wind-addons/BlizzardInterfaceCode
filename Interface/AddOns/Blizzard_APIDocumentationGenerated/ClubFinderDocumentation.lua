@@ -9,6 +9,7 @@ local ClubFinder =
 		{
 			Name = "ApplicantAcceptClubInvite",
 			Type = "Function",
+			HasRestrictions = true,
 
 			Arguments =
 			{
@@ -18,6 +19,7 @@ local ClubFinder =
 		{
 			Name = "ApplicantDeclineClubInvite",
 			Type = "Function",
+			HasRestrictions = true,
 
 			Arguments =
 			{
@@ -27,6 +29,7 @@ local ClubFinder =
 		{
 			Name = "CancelMembershipRequest",
 			Type = "Function",
+			HasRestrictions = true,
 
 			Arguments =
 			{
@@ -84,6 +87,7 @@ local ClubFinder =
 		{
 			Name = "GetClubTypeFromFinderGUID",
 			Type = "Function",
+			MayReturnNothing = true,
 
 			Arguments =
 			{
@@ -325,6 +329,7 @@ local ClubFinder =
 		{
 			Name = "PlayerGetClubInvitationList",
 			Type = "Function",
+			MayReturnNothing = true,
 
 			Returns =
 			{
@@ -361,6 +366,7 @@ local ClubFinder =
 		{
 			Name = "PostClub",
 			Type = "Function",
+			HasRestrictions = true,
 
 			Arguments =
 			{
@@ -391,6 +397,7 @@ local ClubFinder =
 		{
 			Name = "RequestClubsList",
 			Type = "Function",
+			HasRestrictions = true,
 
 			Arguments =
 			{
@@ -402,6 +409,7 @@ local ClubFinder =
 		{
 			Name = "RequestMembershipToClub",
 			Type = "Function",
+			HasRestrictions = true,
 
 			Arguments =
 			{
@@ -455,6 +463,7 @@ local ClubFinder =
 		{
 			Name = "RespondToApplicant",
 			Type = "Function",
+			HasRestrictions = true,
 
 			Arguments =
 			{

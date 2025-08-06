@@ -49,6 +49,7 @@ end
 function CharacterSelectUtil.ChangeRealm()
 	PlaySound(SOUNDKIT.GS_CHARACTER_SELECTION_DEL_CHARACTER);
 	CharacterSelectListUtil.SaveCharacterOrder();
+	CharacterSelectCharacterFrame:ClearSearch();
 	CharacterSelectUtil.SetAutoSwitchRealm(false);
 	C_RealmList.RequestChangeRealmList();
 end
@@ -112,6 +113,7 @@ function CharacterSelectUtil.SetTooltipForCharacterInfo(characterInfo, character
 	local realmName = characterInfo.realmName;
 
 	-- Block 2
+	local level = characterInfo.experienceLevel;
 	local specID = characterInfo.specID;
 	local _, specName = GetSpecializationInfoForSpecID(specID);
 	local className = characterInfo.className;
@@ -137,10 +139,9 @@ function CharacterSelectUtil.SetTooltipForCharacterInfo(characterInfo, character
 		GameTooltip_AddColoredLine(GlueTooltip, characterInfo.guid, GRAY_FONT_COLOR);
 	end
 
-	-- Add a blank line only if we have populated fields for the next section.
-	if className or areaName then
-		GameTooltip_AddBlankLineToTooltip(GlueTooltip);
 
+	GameTooltip_AddBlankLineToTooltip(GlueTooltip);
+	if className then
 		local color = CreateColor(GetClassColor(characterInfo.classFilename));
 		if specName and specName ~= "" and className then
 			local formattedSpecAndClass = TALENT_SPEC_AND_CLASS:format(specName, className);
@@ -148,7 +149,11 @@ function CharacterSelectUtil.SetTooltipForCharacterInfo(characterInfo, character
 		elseif className then
 			GameTooltip_AddColoredLine(GlueTooltip, color:WrapTextInColorCode(className), BLUE_FONT_COLOR);
 		end
+	end
 
+	GameTooltip_AddColoredLine(GlueTooltip, CHARACTER_SELECT_LEVEL_TOOLTIP:format(level), WHITE_FONT_COLOR);
+
+	if areaName then
 		GameTooltip_AddColoredLine(GlueTooltip, areaName, GRAY_FONT_COLOR);
 	end
 

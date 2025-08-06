@@ -6,28 +6,14 @@ local SpecializationShared =
 	Functions =
 	{
 		{
-			Name = "GetNumSpecializationsForClassID",
-			Type = "Function",
-
-			Arguments =
-			{
-				{ Name = "specID", Type = "number", Nilable = false },
-			},
-
-			Returns =
-			{
-				{ Name = "specCount", Type = "number", Nilable = false },
-			},
-		},
-		{
 			Name = "GetSpecializationInfoForClassID",
 			Type = "Function",
 
 			Arguments =
 			{
 				{ Name = "classID", Type = "number", Nilable = false },
-				{ Name = "index", Type = "number", Nilable = false },
-				{ Name = "gender", Type = "number", Nilable = true },
+				{ Name = "index", Type = "luaIndex", Nilable = false },
+				{ Name = "gender", Type = "UnitSex", Nilable = true },
 			},
 
 			Returns =
@@ -50,7 +36,7 @@ local SpecializationShared =
 			Arguments =
 			{
 				{ Name = "specID", Type = "number", Nilable = false },
-				{ Name = "gender", Type = "number", Nilable = true },
+				{ Name = "gender", Type = "UnitSex", Nilable = true },
 			},
 
 			Returns =
@@ -73,12 +59,21 @@ local SpecializationShared =
 			Arguments =
 			{
 				{ Name = "specID", Type = "number", Nilable = false },
-				{ Name = "gender", Type = "number", Nilable = true },
+				{ Name = "gender", Type = "UnitSex", Nilable = true },
 			},
 
 			Returns =
 			{
 				{ Name = "name", Type = "cstring", Nilable = true },
+			},
+		},
+		{
+			Name = "HasLootSpecializations",
+			Type = "Function",
+
+			Returns =
+			{
+				{ Name = "hasLootSpecializations", Type = "bool", Nilable = false },
 			},
 		},
 	},
@@ -89,6 +84,18 @@ local SpecializationShared =
 
 	Tables =
 	{
+		{
+			Name = "SpecializationSystem",
+			Type = "Enumeration",
+			NumValues = 2,
+			MinValue = 0,
+			MaxValue = 1,
+			Fields =
+			{
+				{ Name = "TalentTab", Type = "SpecializationSystem", EnumValue = 0 },
+				{ Name = "ChrSpecialization", Type = "SpecializationSystem", EnumValue = 1 },
+			},
+		},
 		{
 			Name = "SpecializationInfoResult",
 			Type = "Structure",

@@ -16,6 +16,14 @@ function ScrollBoxViewMixin:SetFrameLevelPolicy(frameLevelPolicy)
 	self.frameLevelPolicy = frameLevelPolicy;
 end
 
+function ScrollBoxViewMixin:IsElementStretchDisabled()
+	return self.elementStretchDisabled;
+end
+
+function ScrollBoxViewMixin:SetElementStretchDisabled(elementStretchDisabled)
+	self.elementStretchDisabled = elementStretchDisabled;
+end
+
 function ScrollBoxViewMixin:Init()
 	self.initialized = true;
 	self.frames = {};
@@ -35,6 +43,10 @@ end
 
 function ScrollBoxViewMixin:SetPanExtent(panExtent)
 	self.panExtent = panExtent;
+end
+
+function ScrollBoxViewMixin:SetMaxPanExtent(maxPanExtent)
+	self.maxPanExtent = maxPanExtent;
 end
 
 function ScrollBoxViewMixin:SetScrollBox(scrollBox)

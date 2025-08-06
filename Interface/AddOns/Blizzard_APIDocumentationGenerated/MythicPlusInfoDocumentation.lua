@@ -9,6 +9,7 @@ local MythicPlusInfo =
 		{
 			Name = "GetCurrentAffixes",
 			Type = "Function",
+			MayReturnNothing = true,
 
 			Returns =
 			{
@@ -61,6 +62,7 @@ local MythicPlusInfo =
 		{
 			Name = "GetLastWeeklyBestInformation",
 			Type = "Function",
+			MayReturnNothing = true,
 
 			Returns =
 			{
@@ -71,6 +73,7 @@ local MythicPlusInfo =
 		{
 			Name = "GetOwnedKeystoneChallengeMapID",
 			Type = "Function",
+			MayReturnNothing = true,
 
 			Returns =
 			{
@@ -80,6 +83,7 @@ local MythicPlusInfo =
 		{
 			Name = "GetOwnedKeystoneLevel",
 			Type = "Function",
+			MayReturnNothing = true,
 
 			Returns =
 			{
@@ -89,6 +93,7 @@ local MythicPlusInfo =
 		{
 			Name = "GetOwnedKeystoneMapID",
 			Type = "Function",
+			MayReturnNothing = true,
 
 			Returns =
 			{
@@ -142,6 +147,7 @@ local MythicPlusInfo =
 		{
 			Name = "GetSeasonBestAffixScoreInfoForMap",
 			Type = "Function",
+			MayReturnNothing = true,
 			Documentation = { "Gets the active players best runs by the seasonal tracked affixes as well as their overall score for the current season." },
 
 			Arguments =
@@ -173,6 +179,7 @@ local MythicPlusInfo =
 		{
 			Name = "GetSeasonBestMythicRatingFromThisExpansion",
 			Type = "Function",
+			MayReturnNothing = true,
 
 			Returns =
 			{
@@ -183,6 +190,7 @@ local MythicPlusInfo =
 		{
 			Name = "GetWeeklyBestForMap",
 			Type = "Function",
+			MayReturnNothing = true,
 
 			Arguments =
 			{
@@ -218,15 +226,6 @@ local MythicPlusInfo =
 			Returns =
 			{
 				{ Name = "isMythicPlusActive", Type = "bool", Nilable = false },
-			},
-		},
-		{
-			Name = "IsWeeklyRewardAvailable",
-			Type = "Function",
-
-			Returns =
-			{
-				{ Name = "weeklyRewardAvailable", Type = "bool", Nilable = false },
 			},
 		},
 		{
@@ -319,6 +318,16 @@ local MythicPlusInfo =
 				{ Name = "thisWeek", Type = "bool", Nilable = false },
 				{ Name = "completed", Type = "bool", Nilable = false },
 				{ Name = "runScore", Type = "number", Nilable = false },
+			},
+		},
+		{
+			Name = "SeasonTimeInfo",
+			Type = "Structure",
+			Fields =
+			{
+				{ Name = "bestTime", Type = "number", Nilable = false },
+				{ Name = "lastTime", Type = "number", Nilable = false },
+				{ Name = "medal", Type = "number", Nilable = false },
 			},
 		},
 	},

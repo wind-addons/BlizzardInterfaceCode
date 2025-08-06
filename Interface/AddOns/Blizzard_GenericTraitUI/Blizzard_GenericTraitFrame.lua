@@ -11,9 +11,12 @@ local GenericTraitFrameLayoutOptions = {
 	-- now we're just going to use what we have.
 	Default = {
 		NineSliceTextureKit = "thewarwithin",
+		NineSliceFormatString = "ui-frame-%s-border",
 		TitleDividerAtlas = "dragonriding-talents-line",
+		TitleDividerShown = true,
 		BackgroundAtlas = "ui-frame-thewarwithin-backgroundtile",
 		HeaderSize = { Width = 500, Height = 50 },
+		FrameSize = { Width = 650, Height = 750 },
 		ShowInset = false,
 		HeaderOffset = { x = 0, y = -30 },
 		CurrencyOffset = { x = 0, y = -20 },
@@ -50,6 +53,34 @@ local GenericTraitFrameLayoutOptions = {
 	TheVizier = {
 		Title = GENERIC_TRAIT_FRAME_THE_VIZIER_TITLE,
 	},
+
+	DRIVE = {
+		NineSliceFormatString = "ui-frame-%s-border-small",
+		Title = GENERIC_TRAIT_FRAME_DRIVE_TITLE,
+		HeaderSize = { Width = 250, Height = 50 },
+		PanOffset = { x = 140, y = -35 },
+		FrameSize = { Width = 350, Height = 575 },
+	},
+
+	Visions = {
+		Title = GENERIC_TRAIT_FRAME_VISIONS_TITLE,
+		BackgroundAtlas = "talenttree-horrificvision-background",
+	},
+
+	TitanConsole = {
+		Title = GENERIC_TRAIT_FRAME_TITAN_CONSOLE_TITLE,
+		TitleDividerShown = false,
+		BackgroundAtlas = "talenttree-titanconsole-background",
+		HeaderSize = { Width = 430, Height = 50 },
+		FrameSize = { Width = 580, Height = 940 },
+		HeaderOffset = { x = 0, y = -37 },
+		CurrencyOffset = { x = 40, y = -14 },
+		PanOffset = { x = 12, y = -15 },
+	},
+
+	ReshiiWraps = {
+		Title = GENERIC_TRAIT_FRAME_RESHII_WRAPS_TITLE,
+	},
 };
 
 local GenericTraitFrameLayouts = {
@@ -66,6 +97,18 @@ local GenericTraitFrameLayouts = {
 
 	-- Pact: The Vizier
 	[1046] = GenericTraitFrameLayoutOptions.TheVizier,
+
+	-- D.R.I.V.E
+	[1056] = GenericTraitFrameLayoutOptions.DRIVE,
+
+	-- Visions
+	[1057] = GenericTraitFrameLayoutOptions.Visions,
+
+	-- Titan Console (OC Delve)
+	[1061] = GenericTraitFrameLayoutOptions.TitanConsole,
+
+	-- Reshii Wraps (11.2.0 Cloak)
+	[1115] = GenericTraitFrameLayoutOptions.ReshiiWraps,
 };
 
 function GetGenericTraitFrameLayoutInfo(treeID)
@@ -130,10 +173,12 @@ function GenericTraitFrameMixin:OnLoad()
 end
 
 function GenericTraitFrameMixin:ApplyLayout(layoutInfo)
+	self:SetSize(layoutInfo.FrameSize.Width, layoutInfo.FrameSize.Height);
 	self.Background:SetAtlas(layoutInfo.BackgroundAtlas);
 	self.Header.Title:SetText(layoutInfo.Title or "");
 	self.Header:SetSize(layoutInfo.HeaderSize.Width, layoutInfo.HeaderSize.Height);
 	self.Header.TitleDivider:SetAtlas(layoutInfo.TitleDividerAtlas, true);
+	self.Header.TitleDivider:SetShown(layoutInfo.TitleDividerShown);
 	self.Inset:SetShown(layoutInfo.ShowInset);
 	self.Header:SetPoint("TOP", layoutInfo.HeaderOffset.x, layoutInfo.HeaderOffset.y);
 	self.Currency:SetPoint("TOPRIGHT", self.Header, "BOTTOMRIGHT", layoutInfo.CurrencyOffset.x, layoutInfo.CurrencyOffset.y);
@@ -147,8 +192,7 @@ function GenericTraitFrameMixin:ApplyLayout(layoutInfo)
 	self.BorderOverlay:SetShown(useNewNineSlice);
 
 	if useNewNineSlice then
-		local borderFrameTextureKitRegion = "UI-Frame-%s-Border";
-		self.BorderOverlay:SetAtlas(borderFrameTextureKitRegion:format(layoutInfo.NineSliceTextureKit));
+		self.BorderOverlay:SetAtlas(layoutInfo.NineSliceFormatString:format(layoutInfo.NineSliceTextureKit));
 	else
 		self.NineSlice.DetailTop:SetAtlas(layoutInfo.DetailTopAtlas, true);
 		if layoutInfo.NineSliceTextureKit ~= nil then
@@ -163,6 +207,11 @@ function GenericTraitFrameMixin:ApplyLayout(layoutInfo)
 end
 
 function GenericTraitFrameMixin:OnShow()
+	-- Changes can happen to the tree while it was hidden that may require a full update so mark it
+	-- as dirty before calling the base OnShow. For example, skyriding talents can be automatically
+	-- purchased on level up.
+	self:MarkTreeDirty();
+
 	-- 11.0 Placeholder
 	local treeID = self.traitTreeID;
 	local layout = GetGenericTraitFrameLayoutInfo(treeID);

@@ -17,12 +17,13 @@ local QuestInfoSystem =
 
 			Returns =
 			{
-				{ Name = "classification", Type = "QuestClassification", Nilable = true },
+				{ Name = "classification", Type = "QuestClassification", Nilable = false },
 			},
 		},
 		{
 			Name = "GetQuestRewardCurrencies",
 			Type = "Function",
+			MayReturnNothing = true,
 
 			Arguments =
 			{
@@ -52,6 +53,7 @@ local QuestInfoSystem =
 		{
 			Name = "GetQuestRewardSpells",
 			Type = "Function",
+			MayReturnNothing = true,
 
 			Arguments =
 			{
