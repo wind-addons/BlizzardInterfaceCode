@@ -54,8 +54,7 @@ local function IsBoostFlowValidForCharacter(flowData, level, boostInProgress, is
 		return false;
 	end
 
-	local timerunningSeasonID = playerGUID and GetCharacterTimerunningSeasonID(playerGUID);
-	if timerunningSeasonID then
+	if playerGUID and IsCharacterTimerunning(playerGUID) then
 		return false;
 	end
 
@@ -253,7 +252,7 @@ end
 
 function CharacterSelectBlockBase:Initialize(results)
 	for i = 1, 3 do
-		if (self.frame.BonusResults[i]) then
+		if self.frame.BonusResults[i] then
 			self.frame.BonusResults[i]:Hide();
 		end
 	end
@@ -264,43 +263,34 @@ function CharacterSelectBlockBase:Initialize(results)
 	self:ClearResultInfo();
 	self.lastSelectedIndex = CharacterSelect.selectedIndex;
 
-	if (CharacterUpgrade_IsCreatedCharacterUpgrade()) then
+	if CharacterUpgrade_IsCreatedCharacterUpgrade() then
 		CharacterSelect_UpdateButtonState();
 
-		if (self.createNum < GetNumCharacters()) then
-			local scrollBox = CharacterSelectCharacterFrame.ScrollBox;
-			scrollBox:ScrollToEnd();
+		self.index = CharacterSelect.selectedIndex;
+		self.charid = CharacterSelectListUtil.GetCharIDFromIndex(CharacterSelect.selectedIndex);
+		self.playerguid = GetCharacterGUID(self.charid);
 
-			local last = true;
-			CharacterSelect.selectedIndex = CharacterSelectListUtil.GetFirstOrLastCharacterIndex(last);
-			CharacterSelectCharacterFrame:UpdateCharacterSelection();
+		local frame = CharacterSelectCharacterFrame.ScrollBox:FindFrameByPredicate(function(frame, elementData)
+			return CharacterSelectListUtil.GetCharacterPositionData(self.playerguid, elementData) ~= nil;
+		end);
 
-			self.index = CharacterSelect.selectedIndex;
-			self.charid = CharacterSelectListUtil.GetCharIDFromIndex(CharacterSelect.selectedIndex);
-			self.playerguid = GetCharacterGUID(self.charid);
-
-			local frame = scrollBox:FindFrameByPredicate(function(frame, elementData)
-				return CharacterSelectListUtil.GetCharacterPositionData(self.playerguid, elementData) ~= nil;
-			end);
-
-			if frame then
-				local frameElementData = frame:GetElementData();
-				if frameElementData.isGroup then
-					for _, character in ipairs(frame.groupButtons) do
-						if character:GetCharacterID() == self.charid then
-							clearButtonScripts(character);
-							break;
-						end
+		if frame then
+			local frameElementData = frame:GetElementData();
+			if frameElementData.isGroup then
+				for _, character in ipairs(frame.groupButtons) do
+					if character:GetCharacterID() == self.charid then
+						clearButtonScripts(character);
+						break;
 					end
-				else
-					clearButtonScripts(frame);
 				end
+			else
+				clearButtonScripts(frame);
 			end
-
-			CharacterServicesMaster_Update();
-
-			return;
 		end
+
+		CharacterServicesMaster_Update();
+
+		return;
 	end
 
 	CharacterServicesCharacterSelector:Show();
@@ -885,10 +875,6 @@ function DoesClientThinkTheCharacterIsEligibleForCharacterUpgrade(characterID)
 	local errors = {};
 
 	if characterInfo then
-		local isSameRealm = CharacterSelectUtil.IsSameRealmAsCurrent(characterInfo.realmAddress);
-		CheckAddVASErrorString(errors, BLIZZARD_STORE_VAS_ERROR_CHARACTER_ON_DIFFERENT_REALM_1, isSameRealm);
-		CheckAddVASErrorString(errors, BLIZZARD_STORE_VAS_ERROR_CHARACTER_ON_DIFFERENT_REALM_2, isSameRealm);
-
 		-- CanBoostCharacter could be broken down into individual VAS error checks to match other flows.  At the moment they just return false with no associated error.
 		local canTransfer = #errors == 0 and CanBoostCharacter(characterInfo.experienceLevel, characterInfo.boostInProgress, characterInfo.isTrialBoost, characterInfo.isRevokedCharacterUpgrade, characterInfo.vasServiceInProgress, characterInfo.isExpansionTrialCharacter, characterInfo.raceFilename, characterInfo.hasWowToken, characterInfo.guid);
 		return canTransfer, errors, characterInfo.guid, characterInfo.characterServiceRequiresLogin, characterInfo.isTrialBoost, IsCharacterEligibleForVeteranBonus(characterInfo.experienceLevel, characterInfo.isTrialBoost, characterInfo.isRevokedCharacterUpgrade);
@@ -969,12 +955,8 @@ function CharacterUpgradeSelectCharacterFrame_OnLoad(self)
 end
 
 function CharacterUpgrade_SetupFlowForNewCharacter(characterType)
-	if characterType == Enum.CharacterCreateType.Boost then
-		CharacterUpgradeCharacterSelectBlock.createNum = GetNumCharacters();
-
-		if CharacterServicesMaster.flow then
-			CHARACTER_UPGRADE_CREATE_CHARACTER_DATA = CharacterServicesMaster.flow.data;
-		end
+	if characterType == Enum.CharacterCreateType.Boost and CharacterServicesMaster.flow then
+		CHARACTER_UPGRADE_CREATE_CHARACTER_DATA = CharacterServicesMaster.flow.data;
 	end
 end
 
