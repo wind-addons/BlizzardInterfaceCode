@@ -3279,6 +3279,7 @@ function ChatChannelDropdown_PopOutChat(sourceChatFrame, chatType, chatTarget)
 	FCF_CopyChatSettings(frame, sourceChatFrame);
 
 	ChatFrame_RemoveAllMessageGroups(frame);
+
 	ChatFrame_RemoveAllChannels(frame);
 	ChatFrame_ReceiveAllPrivateMessages(frame);
 
