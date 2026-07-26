@@ -23,6 +23,21 @@ local HousingLayoutUI =
 			},
 		},
 		{
+			Name = "CanSetViewedFloor",
+			Type = "Function",
+			SecretArguments = "AllowedWhenUntainted",
+
+			Arguments =
+			{
+				{ Name = "floor", Type = "number", Nilable = false },
+			},
+
+			Returns =
+			{
+				{ Name = "canSet", Type = "bool", Nilable = false },
+			},
+		},
+		{
 			Name = "CancelActiveLayoutEditing",
 			Type = "Function",
 		},
